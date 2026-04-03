@@ -41,6 +41,7 @@ export const dashboardService = {
 
 export const chatService = {
   sendMessage: (message: string) => api.post('/chat', { message }),
+  getHistory: () => api.get('/chat/history'),
 };
 
 export const systemService = {

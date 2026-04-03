@@ -61,6 +61,26 @@ export const useChatStore = defineStore('chat', {
 
     clearChat() {
       this.messages = [];
+    },
+
+    async fetchHistory() {
+      this.loading = true;
+      this.error = null;
+      try {
+        const response: any = await chatService.getHistory();
+        if (response?.data?.history) {
+          this.messages = response.data.history.map((msg: any) => ({
+            id: msg.id,
+            role: msg.role === 'ai' ? 'assistant' : msg.role,
+            content: msg.message,
+            timestamp: msg.created_at,
+          }));
+        }
+      } catch (err: any) {
+        this.error = err.message || 'Error fetching history';
+      } finally {
+        this.loading = false;
+      }
     }
   },
 });

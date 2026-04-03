@@ -78,7 +78,7 @@ import {
   IonMenuButton 
 } from '@ionic/vue';
 import { sparklesOutline, trashOutline, send } from 'ionicons/icons';
-import { ref, computed, nextTick, watch } from 'vue';
+import { ref, computed, nextTick, watch, onMounted } from 'vue';
 import { useChatStore } from '@/stores/chat';
 import { marked } from 'marked';
 
@@ -100,6 +100,10 @@ const handleSend = async () => {
 };
 
 const clearChat = () => chatStore.clearChat();
+
+onMounted(() => {
+  chatStore.fetchHistory();
+});
 </script>
 
 <style scoped>
