@@ -1,2 +1,213 @@
-/* For information on how to create your own theme, please refer to:
-http://ionicframework.com/docs/theming/ */
+/* AgTech Premium Typography */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&display=swap');
+
+:root {
+  --ion-font-family: 'Inter', sans-serif;
+  --ag-font-heading: 'Outfit', sans-serif;
+
+  /** AgTech Premium Palette **/
+  --ag-neon-green: #2ecc71;
+  --ag-neon-green-rgb: 46, 204, 113;
+  --ag-cobalt: #2c3e50;
+  --ag-cobalt-rgb: 44, 62, 80;
+  --ag-accent: #3498db;
+  --ag-red: #ff7675;
+  --ag-purple: #a29bf6;
+  --ag-yellow: #f1c40f;
+  
+  /** Glassmorphism 2.0 **/
+  --ag-glass-bg: rgba(255, 255, 255, 0.03);
+  --ag-glass-border: rgba(255, 255, 255, 0.08);
+  --ag-glass-blur: blur(16px);
+
+  /** Ionic Overrides **/
+  --ion-color-primary: var(--ag-neon-green);
+  --ion-color-primary-rgb: var(--ag-neon-green-rgb);
+
+  /** Background **/
+  --ion-background-color: #0f172a;
+  --ion-text-color: #f8fafc;
+}
+
+.ag-neon-glow {
+  text-shadow: 0 0 15px rgba(var(--ag-neon-green-rgb), 0.4);
+  font-family: var(--ag-font-heading);
+}
+
+h1, h2, h3, ion-title {
+  font-family: var(--ag-font-heading);
+}
+
+.ag-glass-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
+  backdrop-filter: var(--ag-glass-blur);
+  -webkit-backdrop-filter: var(--ag-glass-blur);
+  border: 1px solid var(--ag-glass-border);
+  border-radius: 20px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  position: relative;
+}
+
+.ag-glass-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.glass-blur {
+  backdrop-filter: var(--ag-glass-blur);
+  -webkit-backdrop-filter: var(--ag-glass-blur);
+}
+
+/** Utility Classes for AgTech Colors **/
+.text-neon-green { color: var(--ag-neon-green) !important; }
+.bg-neon-green { background-color: var(--ag-neon-green) !important; }
+.bg-neon-green-10 { background-color: rgba(var(--ag-neon-green-rgb), 0.1) !important; }
+.bg-neon-green-20 { background-color: rgba(var(--ag-neon-green-rgb), 0.2) !important; }
+
+.text-accent { color: var(--ag-accent) !important; }
+.bg-accent { background-color: var(--ag-accent) !important; }
+
+.text-red-400 { color: var(--ag-red) !important; }
+.bg-red-400 { background-color: var(--ag-red) !important; }
+
+.text-purple-400 { color: var(--ag-purple) !important; }
+.bg-purple-400 { background-color: var(--ag-purple) !important; }
+
+.text-yellow-400 { color: var(--ag-yellow) !important; }
+.bg-yellow-400 { background-color: var(--ag-yellow) !important; }
+
+.border-neon-green { border-color: var(--ag-neon-green) !important; }
+.border-accent { border-color: var(--ag-accent) !important; }
+
+/** Responsive Utilities **/
+@media (min-width: 768px) {
+  .ion-hide-md-up {
+    display: none !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .ion-hide-md-down {
+    display: none !important;
+  }
+}
+
+/** Sidebar Styling **/
+ion-menu {
+  --width: 280px;
+  --border: 1px solid var(--ag-glass-border);
+}
+
+.sidebar-content {
+  --background: var(--ion-background-color);
+  background: linear-gradient(180deg, rgba(var(--ag-cobalt-rgb), 0.5) 0%, var(--ion-background-color) 100%);
+}
+
+.sidebar-item {
+  --background: transparent;
+  --color: var(--ion-text-color);
+  --border-radius: 12px;
+  margin: 4px 12px;
+  font-weight: 500;
+  --padding-start: 16px;
+  transition: all 0.3s ease;
+}
+
+.sidebar-item ion-icon {
+  color: var(--ion-text-color);
+  opacity: 0.6;
+  margin-right: 16px;
+}
+
+.sidebar-item:hover {
+  --background: rgba(var(--ag-neon-green-rgb), 0.05);
+}
+
+.item-has-focus, .sidebar-item.item-active {
+  --background: rgba(var(--ag-neon-green-rgb), 0.1);
+  --color: var(--ag-neon-green);
+}
+
+.sidebar-item.item-active ion-icon {
+  color: var(--ag-neon-green);
+  opacity: 1;
+}
+
+.premium-toolbar {
+  --background: #0f172a;
+  backdrop-filter: blur(20px);
+  --border-style: none;
+  border-bottom: 1px solid var(--ag-glass-border);
+}
+
+.custom-tab-bar {
+  --background: #0f172a;
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--ag-glass-border);
+  height: 65px;
+}
+
+ion-tab-button {
+  --color: rgba(255, 255, 255, 0.4);
+  --color-selected: var(--ag-neon-green);
+}
+
+/** Tech UI Utilities **/
+.tech-cut-corner {
+  clip-path: polygon(
+    0% 0%, 
+    calc(100% - 15px) 0%, 
+    100% 15px, 
+    100% 100%, 
+    15px 100%, 
+    0% calc(100% - 15px)
+  );
+}
+
+.tech-grid-bg {
+  background-image: 
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+
+/** Neural Scan & Chat Keyframes **/
+@keyframes neuralScan {
+  0% { transform: translateY(-100%); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+
+@keyframes glitch {
+  0% { transform: translate(0); }
+  20% { transform: translate(-2px, 2px); }
+  40% { transform: translate(-2px, -2px); }
+  60% { transform: translate(2px, 2px); }
+  80% { transform: translate(2px, -2px); }
+  100% { transform: translate(0); }
+}
+
+.text-gradient-neon {
+  background: linear-gradient(90deg, var(--ag-neon-green), var(--ag-accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.bg-neural-gradient {
+  background: linear-gradient(135deg, rgba(var(--ag-neon-green-rgb), 0.1) 0%, rgba(var(--ag-cobalt-rgb), 0.3) 100%);
+}
+
+
+
+
