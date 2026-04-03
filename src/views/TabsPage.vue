@@ -1,8 +1,8 @@
 <template>
   <ion-page>
     <ion-split-pane content-id="main-content" when="md">
-      <!-- Premium Sidebar (Visible on MD+) -->
-      <ion-menu content-id="main-content" type="overlay" class="ag-sidebar hide-mobile">
+      <!-- Premium Sidebar -->
+      <ion-menu content-id="main-content" class="ag-sidebar">
         <ion-content class="sidebar-content">
           <div class="sidebar-header p-6 flex flex-col gap-1 border-b border-white/5">
             <h1 class="ag-neon-glow text-2xl font-black tracking-tight">AgroNexus <span class="text-[10px] bg-neon-green/10 text-neon-green px-2 py-0.5 rounded ml-1">AI</span></h1>
@@ -79,32 +79,34 @@
       </ion-menu>
 
       <!-- Main Content with Mobile Tabs -->
-      <ion-tabs id="main-content">
-        <ion-router-outlet />
-        
-        <!-- Mobile Bottom Tab Bar (Visible only on small screens) -->
-        <ion-tab-bar slot="bottom" class="hide-desktop premium-tab-bar">
-          <ion-tab-button tab="home" href="/tabs/home">
-            <ion-icon :icon="homeOutline" />
-            <ion-label>Home</ion-label>
-          </ion-tab-button>
+      <div id="main-content" class="ion-page">
+        <ion-tabs>
+          <ion-router-outlet />
+          
+          <!-- Mobile Bottom Tab Bar (Visible only on small screens) -->
+          <ion-tab-bar slot="bottom" class="hide-on-desktop premium-tab-bar">
+            <ion-tab-button tab="home" href="/tabs/home">
+              <ion-icon :icon="homeOutline" />
+              <ion-label>Home</ion-label>
+            </ion-tab-button>
 
-          <ion-tab-button tab="tab1" href="/tabs/tab1">
-            <ion-icon :icon="thermometerOutline" />
-            <ion-label>Dashboard</ion-label>
-          </ion-tab-button>
+            <ion-tab-button tab="tab1" href="/tabs/tab1">
+              <ion-icon :icon="thermometerOutline" />
+              <ion-label>Dashboard</ion-label>
+            </ion-tab-button>
 
-          <ion-tab-button tab="tab2" href="/tabs/tab2">
-            <ion-icon :icon="chatbubbleEllipsesOutline" />
-            <ion-label>AI Assistant</ion-label>
-          </ion-tab-button>
+            <ion-tab-button tab="tab2" href="/tabs/tab2">
+              <ion-icon :icon="chatbubbleEllipsesOutline" />
+              <ion-label>AI Assistant</ion-label>
+            </ion-tab-button>
 
-          <ion-tab-button tab="tab3" href="/tabs/tab3">
-            <ion-icon :icon="pulseOutline" />
-            <ion-label>Control</ion-label>
-          </ion-tab-button>
-        </ion-tab-bar>
-      </ion-tabs>
+            <ion-tab-button tab="tab3" href="/tabs/tab3">
+              <ion-icon :icon="pulseOutline" />
+              <ion-label>Control</ion-label>
+            </ion-tab-button>
+          </ion-tab-bar>
+        </ion-tabs>
+      </div>
     </ion-split-pane>
   </ion-page>
 </template>
@@ -208,12 +210,11 @@ ion-tab-button ion-label {
   60% { transform: scale(1); opacity: 1; }
 }
 
-/* Visibility Helpers (Sync with variables.css) */
 @media (max-width: 767px) {
-  .hide-mobile { display: none !important; }
+  .hide-on-mobile { display: none !important; }
 }
 @media (min-width: 768px) {
-  .hide-desktop { display: none !important; }
+  .hide-on-desktop { display: none !important; }
 }
 
 .flex { display: flex; }
