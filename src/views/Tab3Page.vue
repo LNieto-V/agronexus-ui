@@ -89,6 +89,69 @@
               </div>
 
             </div>
+
+             <h3 class="text-sm font-semibold text-muted uppercase tracking-wide mb-4 mt-12">Security & API Access</h3>
+            <div class="ag-flex-col gap-6">
+              <div class="ag-card overflow-hidden">
+                <!-- Section Header -->
+                <div class="p-8 md:p-10 border-b border-white/5 bg-white/2">
+                  <div class="ag-flex-row gap-6">
+                    <div class="ag-icon-box bg-primary-soft text-primary p-5 rounded-2xl w-14 h-14">
+                      <ion-icon :icon="shieldCheckmarkOutline" class="text-3xl" />
+                    </div>
+                    <div>
+                      <h4 class="font-bold text-2xl tracking-tight">Developer Gateway</h4>
+                      <p class="text-sm text-muted mt-2 leading-relaxed max-w-md">Provision secure access for external AgTech integrations & professional IoT protocols.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Key Types Grid -->
+                <div class="p-8 md:p-10 ag-grid sm:ag-grid-2 gap-8">
+                  <!-- Read Only Key -->
+                  <div class="p-8 rounded-[24px] bg-white/3 border border-white/5 hover:bg-white/5 transition-all">
+                    <div class="ag-flex-row gap-4 mb-6">
+                      <div class="w-12 h-12 rounded-2xl bg-blue-soft text-blue flex items-center justify-center">
+                        <ion-icon :icon="eyeOutline" class="text-xl" />
+                      </div>
+                      <span class="font-bold text-lg">Telemetry Access</span>
+                    </div>
+                    <p class="text-sm text-muted leading-relaxed mb-8">
+                      Grants read-only access to sensor data and historical telemetry. 
+                      <span class="text-blue/80 font-medium block mt-1">Safe for dashboards and public monitoring.</span>
+                    </p>
+                    <ion-button @click="generateKey('read')" fill="clear" class="premium-text-btn font-bold px-0" size="default">
+                      GENERATE READ KEY
+                      <ion-icon :icon="chevronForwardOutline" slot="end" class="ml-2" />
+                    </ion-button>
+                  </div>
+
+                  <!-- Write Key -->
+                  <div class="p-8 rounded-[24px] bg-white/3 border border-white/5 hover:bg-white/5 transition-all">
+                    <div class="ag-flex-row gap-4 mb-6">
+                      <div class="w-12 h-12 rounded-2xl bg-orange-soft text-orange flex items-center justify-center">
+                        <ion-icon :icon="flashOutline" class="text-xl" />
+                      </div>
+                      <span class="font-bold text-lg">Full Control</span>
+                    </div>
+                    <p class="text-sm text-muted leading-relaxed mb-8">
+                      Grants full access to system actuators and configuration settings.
+                      <span class="text-orange/80 font-medium block mt-1">Elevated security requirements.</span>
+                    </p>
+                    <ion-button @click="generateKey('write')" fill="clear" class="premium-text-btn orange font-bold px-0" size="default">
+                      GENERATE WRITE KEY
+                      <ion-icon :icon="chevronForwardOutline" slot="end" class="ml-2" />
+                    </ion-button>
+                  </div>
+                </div>
+
+                <!-- Security Note -->
+                <div class="px-10 py-6 bg-black/40 flex items-center gap-4">
+                  <div class="w-2.5 h-2.5 rounded-full bg-primary animate-pulse shadow-[0_0_12px_var(--ag-primary)]"></div>
+                  <span class="text-[11px] uppercase font-bold text-muted tracking-[0.2em]">Advanced Encryption: SHA-256 HMAC Protocols Active</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div>
@@ -125,6 +188,11 @@
                   </div>
                 </div>
               </div>
+
+              <ion-button @click="handleLogout" fill="clear" color="danger" class="mt-4">
+                <ion-icon :icon="logOutOutline" slot="start" />
+                Sign Out from AgroNexus
+              </ion-button>
             </div>
 
           </div>
@@ -138,18 +206,26 @@
 <script setup lang="ts">
 import { 
   IonPage, IonHeader, IonToolbar, IonTitle, IonContent, 
-  IonIcon, IonButtons, IonButton, IonMenuButton, IonToggle 
+  IonIcon, IonButtons, IonButton, IonMenuButton, IonToggle,
+  modalController, toastController 
 } from '@ionic/vue';
 import { 
   shieldCheckmarkOutline, waterOutline, sunnyOutline, snowOutline,
-  hardwareChipOutline, constructOutline, flaskOutline 
+  hardwareChipOutline, constructOutline, flaskOutline,
+  logOutOutline, eyeOutline, chevronForwardOutline, flashOutline
 } from 'ionicons/icons';
 import { computed, onMounted, ref } from 'vue';
 import { useSystemStore } from '@/stores/system';
 import { useTelemetryStore } from '@/stores/telemetry';
+import { useAuthStore } from '@/stores/auth';
+import { systemService } from '@/services/api';
+import ApiKeyModal from '@/components/ApiKeyModal.vue';
+import { useRouter } from 'vue-router';
 
 const systemStore = useSystemStore();
 const telemetryStore = useTelemetryStore();
+const authStore = useAuthStore();
+const router = useRouter();
 
 const mode = computed(() => systemStore.mode || 'AUTO');
 const isOnline = computed(() => systemStore.isOnline);
@@ -173,6 +249,38 @@ const checkSystem = async () => {
 
 const sendMock = async () => {
   await telemetryStore.sendMockTelemetry();
+};
+
+const generateKey = async (type: 'read' | 'write') => {
+  try {
+    const response = await systemService.generateApiKey(type);
+    const key = response.data.api_key;
+
+    const modal = await modalController.create({
+      component: ApiKeyModal,
+      componentProps: {
+        apiKey: key
+      },
+      cssClass: 'premium-modal'
+    });
+    await modal.present();
+  } catch (error: any) {
+    const toast = await toastController.create({
+      message: 'Failed to generate API Key',
+      duration: 3000,
+      color: 'danger'
+    });
+    await toast.present();
+  }
+};
+
+const handleLogout = async () => {
+  try {
+    await authStore.signOut();
+    router.replace('/login');
+  } catch (err) {
+    console.error('Logout error', err);
+  }
 };
 
 onMounted(() => {
