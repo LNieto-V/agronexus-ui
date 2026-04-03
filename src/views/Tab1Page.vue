@@ -17,9 +17,9 @@
     <ion-content :fullscreen="true">
       <div class="ag-container py-6">
         <!-- Header Section -->
-        <div class="ag-flex-between mb-8">
+        <div class="ag-flex-col md:ag-flex-row md:ag-flex-between gap-4 mb-8">
           <div>
-            <h2 class="text-3xl font-bold tracking-tight mb-2">Overview</h2>
+            <h2 class="text-2xl md:text-3xl font-bold tracking-tight mb-1">Overview</h2>
             <div class="ag-flex-row gap-2">
               <span class="status-dot bg-primary"></span>
               <p class="text-sm font-medium text-muted">System Online &bull; Live Sensors</p>
@@ -29,10 +29,10 @@
         </div>
 
         <!-- Telemetry Grid -->
-        <div v-if="loading && history.length === 0" class="ag-grid ag-grid-2 md:ag-grid-3 lg:ag-desktop-grid-5 mb-8">
+        <div v-if="loading && history.length === 0" class="ag-grid sm:ag-grid-2 md:ag-grid-3 lg:ag-desktop-grid-5 mb-8">
           <SkeletonCard v-for="i in 5" :key="i" />
         </div>
-        <div v-else class="ag-grid ag-grid-2 md:ag-grid-3 lg:ag-desktop-grid-5 mb-8">
+        <div v-else class="ag-grid sm:ag-grid-2 md:ag-grid-3 lg:ag-desktop-grid-5 mb-8">
           <TelemetryCard label="Temperature" :value="latest?.temperature ?? '--'" unit="°C" :icon="thermometerOutline" color="red" :progress="calcProgress(latest?.temperature, 0, 40)" />
           <TelemetryCard label="Humidity" :value="latest?.humidity ?? '--'" unit="%" :icon="waterOutline" color="blue" :progress="latest?.humidity ?? 0" />
           <TelemetryCard label="pH Level" :value="latest?.ph ?? '--'" unit="pH" :icon="flaskOutline" color="purple" :progress="calcProgress(latest?.ph, 0, 14)" />

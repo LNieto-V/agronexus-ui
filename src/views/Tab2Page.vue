@@ -15,7 +15,7 @@
     </ion-header>
 
     <ion-content :fullscreen="true" class="chat-bg" ref="contentRef">
-      <div class="ag-container py-8 max-w-[800px]">
+      <div class="ag-container py-4 md:py-8 max-w-[800px]">
         <!-- Welcome Message -->
         <div v-if="messages.length === 0" class="ag-flex-col items-center justify-center p-8 mt-12 text-center">
           <div class="ag-icon-box bg-primary-soft text-primary mb-6 !w-16 !h-16 rounded-2xl">
@@ -51,7 +51,7 @@
     </ion-content>
 
     <ion-footer class="ion-no-border bg-transparent">
-      <div class="ag-container max-w-[800px] p-4">
+      <div class="ag-container max-w-[800px] p-2 md:p-4 pb-8 md:pb-4">
         <div class="ag-card ag-flex-row p-2 gap-3 !rounded-2xl">
           <ion-input 
             v-model="input" 
@@ -108,8 +108,11 @@ const clearChat = () => chatStore.clearChat();
 .message-wrapper {
   display: flex;
   flex-direction: column;
-  max-width: 85%;
+  max-width: 92%;
   animation: fadeIn 0.3s ease-out;
+}
+@media (min-width: 768px) {
+  .message-wrapper { max-width: 80%; }
 }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 

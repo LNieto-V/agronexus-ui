@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/auth';
 const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
-    redirect: '/tabs/tab1'
+    redirect: '/tabs/home'
   },
   {
     path: '/login',
@@ -23,7 +23,11 @@ const routes: Array<RouteRecordRaw> = [
     children: [
       {
         path: '',
-        redirect: '/tabs/tab1'
+        redirect: '/tabs/home'
+      },
+      {
+        path: 'home',
+        component: () => import('@/views/AboutPage.vue')
       },
       {
         path: 'tab1',

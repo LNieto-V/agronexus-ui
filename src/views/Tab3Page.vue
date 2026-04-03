@@ -22,7 +22,7 @@
       <div class="ag-container py-6">
         
         <div class="mb-8">
-          <h2 class="text-3xl font-bold tracking-tight mb-2">Command Center</h2>
+          <h2 class="text-2xl md:text-3xl font-bold tracking-tight mb-2">Command Center</h2>
           <p class="text-sm text-muted">Manage automation protocols, environment controls, and system health.</p>
         </div>
 
@@ -43,7 +43,7 @@
           </div>
         </div>
 
-        <div class="ag-grid md:ag-grid-2 mb-8">
+        <div class="ag-grid sm:ag-grid-2 mb-8">
           
           <div>
             <h3 class="text-sm font-semibold text-muted uppercase tracking-wide mb-4">Environment controls</h3>
@@ -94,7 +94,7 @@
             <div class="ag-flex-col gap-6">
               <div class="ag-card overflow-hidden">
                 <!-- Section Header -->
-                <div class="p-8 md:p-10 border-b border-white/5 bg-white/2">
+                <div class="p-6 md:p-10 border-b border-white/5 bg-white/2">
                   <div class="ag-flex-row gap-6">
                     <div class="ag-icon-box bg-primary-soft text-primary p-5 rounded-2xl w-14 h-14">
                       <ion-icon :icon="shieldCheckmarkOutline" class="text-3xl" />
@@ -107,9 +107,9 @@
                 </div>
 
                 <!-- Key Types Grid -->
-                <div class="p-8 md:p-10 ag-grid sm:ag-grid-2 gap-8">
+                <div class="p-6 md:p-10 ag-grid sm:ag-grid-2 gap-6 md:gap-8">
                   <!-- Read Only Key -->
-                  <div class="p-8 rounded-[24px] bg-white/3 border border-white/5 hover:bg-white/5 transition-all">
+                  <div class="p-6 md:p-8 rounded-[24px] bg-white/3 border border-white/5 hover:bg-white/5 transition-all">
                     <div class="ag-flex-row gap-4 mb-6">
                       <div class="w-12 h-12 rounded-2xl bg-blue-soft text-blue flex items-center justify-center">
                         <ion-icon :icon="eyeOutline" class="text-xl" />
@@ -127,7 +127,7 @@
                   </div>
 
                   <!-- Write Key -->
-                  <div class="p-8 rounded-[24px] bg-white/3 border border-white/5 hover:bg-white/5 transition-all">
+                  <div class="p-6 md:p-8 rounded-[24px] bg-white/3 border border-white/5 hover:bg-white/5 transition-all">
                     <div class="ag-flex-row gap-4 mb-6">
                       <div class="w-12 h-12 rounded-2xl bg-orange-soft text-orange flex items-center justify-center">
                         <ion-icon :icon="flashOutline" class="text-xl" />
