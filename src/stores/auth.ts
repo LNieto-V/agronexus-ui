@@ -1,58 +1,73 @@
 import { defineStore } from 'pinia';
+import { shallowRef, computed } from 'vue';
 import { supabase } from '@/lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 
-export const useAuthStore = defineStore('auth', {
-  state: () => ({
-    user: null as User | null,
-    session: null as Session | null,
-    loading: true,
-    initialized: false,
-  }),
+export const useAuthStore = defineStore('auth', () => {
+  const user = shallowRef<User | null>(null);
+  const session = shallowRef<Session | null>(null);
+  const loading = shallowRef(true);
+  const initialized = shallowRef(false);
 
-  getters: {
-    isAuthenticated: (state) => !!state.user,
-    accessToken: (state) => state.session?.access_token || null,
-  },
+  const isAuthenticated = computed(() => !!user.value);
+  const accessToken = computed(() => session.value?.access_token || null);
 
-  actions: {
-    async initialize() {
-      if (this.initialized) return;
+  const userDisplayName = computed(() => {
+    if (!user.value) return 'Farmer';
+    return user.value.user_metadata?.display_name || user.value.user_metadata?.full_name || user.value.email?.split('@')[0] || 'Farmer';
+  });
 
-      const { data: { session } } = await supabase.auth.getSession();
-      this.setSession(session);
+  function setSession(newSession: Session | null) {
+    session.value = newSession;
+    user.value = newSession?.user || null;
+    loading.value = false;
+  }
 
-      supabase.auth.onAuthStateChange((_event, session) => {
-        this.setSession(session);
-      });
+  async function updateProfile(updates: { display_name?: string }) {
+    const { data, error } = await supabase.auth.updateUser({
+      data: updates
+    });
+    if (error) throw error;
+    user.value = data.user;
+    return data;
+  }
 
-      this.initialized = true;
-      this.loading = false;
-    },
+  async function initialize() {
+    if (initialized.value) return;
 
-    setSession(session: Session | null) {
-      this.session = session;
-      this.user = session?.user || null;
-      this.loading = false;
-    },
+    const { data } = await supabase.auth.getSession();
+    setSession(data.session);
 
-    async signUp(credentials: { email: string; password: any }) {
-      const { data, error } = await supabase.auth.signUp(credentials);
-      if (error) throw error;
-      return data;
-    },
+    supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+    });
 
-    async signIn(credentials: { email: string; password: any }) {
-      const { data, error } = await supabase.auth.signInWithPassword(credentials);
-      if (error) throw error;
-      this.setSession(data.session);
-      return data;
-    },
+    initialized.value = true;
+    loading.value = false;
+  }
 
-    async signOut() {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      this.setSession(null);
-    },
-  },
+  async function signUp(credentials: { email: string; password: any; data?: any }) {
+    const { data, error } = await supabase.auth.signUp(credentials);
+    if (error) throw error;
+    return data;
+  }
+
+  async function signIn(credentials: { email: string; password: any }) {
+    const { data, error } = await supabase.auth.signInWithPassword(credentials);
+    if (error) throw error;
+    setSession(data.session);
+    return data;
+  }
+
+  async function signOut() {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    setSession(null);
+  }
+
+  return { 
+    user, session, loading, initialized, isAuthenticated, 
+    accessToken, userDisplayName, initialize, setSession, 
+    signUp, signIn, signOut, updateProfile 
+  };
 });

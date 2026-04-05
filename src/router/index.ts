@@ -27,19 +27,19 @@ const routes: Array<RouteRecordRaw> = [
       },
       {
         path: 'home',
-        component: () => import('@/views/AboutPage.vue')
+        component: () => import('@/views/WelcomeHome.vue')
       },
       {
-        path: 'tab1',
-        component: () => import('@/views/Tab1Page.vue')
+        path: 'dashboard',
+        component: () => import('@/views/TelemetryDashboard.vue')
       },
       {
-        path: 'tab2',
-        component: () => import('@/views/Tab2Page.vue')
+        path: 'assistant',
+        component: () => import('@/views/AiAssistant.vue')
       },
       {
-        path: 'tab3',
-        component: () => import('@/views/Tab3Page.vue')
+        path: 'control',
+        component: () => import('@/views/SystemControl.vue')
       }
     ]
   }
@@ -65,7 +65,7 @@ router.beforeEach(async (to) => {
   }
 
   if ((to.path === '/login' || to.path === '/register') && authStore.isAuthenticated) {
-    return '/tabs/tab1';
+    return '/tabs/home';
   }
 });
 

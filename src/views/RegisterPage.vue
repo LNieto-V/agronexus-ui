@@ -14,6 +14,18 @@
           <form @submit.prevent="handleRegister" class="auth-form">
             <div class="input-group">
               <ion-item lines="none" class="glass-input">
+                <ion-icon :icon="personOutline" slot="start" />
+                <ion-input
+                  v-model="displayName"
+                  type="text"
+                  placeholder="Username (e.g. AgroMaster)"
+                  required
+                ></ion-input>
+              </ion-item>
+            </div>
+
+            <div class="input-group">
+              <ion-item lines="none" class="glass-input">
                 <ion-icon :icon="mailOutline" slot="start" />
                 <ion-input
                   v-model="email"
@@ -76,11 +88,12 @@ import {
   IonPage, IonContent, IonInput, IonButton, 
   IonIcon, IonItem, IonSpinner, toastController 
 } from '@ionic/vue';
-import { sparklesOutline, mailOutline, lockClosedOutline, shieldCheckmarkOutline } from 'ionicons/icons';
+import { sparklesOutline, mailOutline, lockClosedOutline, shieldCheckmarkOutline, personOutline } from 'ionicons/icons';
 import { ref } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { useRouter } from 'vue-router';
 
+const displayName = ref('');
 const email = ref('');
 const password = ref('');
 const confirmPassword = ref('');
@@ -102,7 +115,11 @@ const handleRegister = async () => {
 
   loading.value = true;
   try {
-    await authStore.signUp({ email: email.value, password: password.value });
+    await authStore.signUp({ 
+      email: email.value, 
+      password: password.value,
+      data: { display_name: displayName.value }
+    });
     const toast = await toastController.create({
       message: 'Account created! Please check your email for confirmation.',
       duration: 5000,

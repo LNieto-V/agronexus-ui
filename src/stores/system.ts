@@ -1,49 +1,49 @@
 import { defineStore } from 'pinia';
+import { shallowRef } from 'vue';
 import { dashboardService, systemService } from '../services/api';
+import type { SystemMode } from '@/types';
 
-export const useSystemStore = defineStore('system', {
-  state: () => ({
-    mode: 'AUTO' as 'AUTO' | 'MANUAL',
-    isOnline: true,
-    lastCheck: null as string | null,
-    loading: false,
-    error: null as string | null,
-  }),
+export const useSystemStore = defineStore('system', () => {
+  const mode = shallowRef<SystemMode>('AUTO');
+  const isOnline = shallowRef(true);
+  const lastCheck = shallowRef<string | null>(null);
+  const loading = shallowRef(false);
+  const error = shallowRef<string | null>(null);
 
-  actions: {
-    async fetchState() {
-      try {
-        const response = await dashboardService.getState();
-        this.mode = response.data.mode || 'AUTO';
-        this.isOnline = true;
-      } catch (err: any) {
-        this.isOnline = false;
-        console.error('Error fetching system state:', err);
-      }
-    },
-
-    async updateMode(newMode: 'AUTO' | 'MANUAL') {
-      const previousMode = this.mode;
-      this.mode = newMode; // Optimistic update
-      this.loading = true;
-      try {
-        await dashboardService.updateMode(newMode);
-      } catch (err: any) {
-        this.mode = previousMode; // Rollback
-        this.error = err.message || 'Error updating mode';
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    async checkHealth() {
-      try {
-        await systemService.checkHealth();
-        this.isOnline = true;
-        this.lastCheck = new Date().toISOString();
-      } catch {
-        this.isOnline = false;
-      }
+  async function fetchState() {
+    try {
+      const response = await dashboardService.getState();
+      mode.value = response.data.mode || 'AUTO';
+      isOnline.value = true;
+    } catch (err: unknown) {
+      isOnline.value = false;
+      error.value = err instanceof Error ? err.message : 'Error fetching system state';
     }
-  },
+  }
+
+  async function updateMode(newMode: SystemMode) {
+    const previousMode = mode.value;
+    mode.value = newMode; // Optimistic update
+    loading.value = true;
+    try {
+      await dashboardService.updateMode(newMode);
+    } catch (err: unknown) {
+      mode.value = previousMode; // Rollback
+      error.value = err instanceof Error ? err.message : 'Error updating mode';
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  async function checkHealth() {
+    try {
+      await systemService.checkHealth();
+      isOnline.value = true;
+      lastCheck.value = new Date().toISOString();
+    } catch {
+      isOnline.value = false;
+    }
+  }
+
+  return { mode, isOnline, lastCheck, loading, error, fetchState, updateMode, checkHealth };
 });

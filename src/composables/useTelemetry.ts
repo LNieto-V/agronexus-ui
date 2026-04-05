@@ -14,7 +14,6 @@ export function useTelemetry() {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'telemetry' },
         (payload) => {
-          console.log('Real-time telemetry update:', payload.new);
           store.updateLatest(payload.new as any);
         }
       )

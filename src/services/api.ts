@@ -1,4 +1,14 @@
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
+import type { 
+  DashboardLatestResponse, 
+  DashboardStateResponse, 
+  SystemMode, 
+  TelemetryPayload,
+  ChatSendResponse,
+  ChatHistoryResponse,
+  ApiKeyResponse,
+  ApiKeyType
+} from '@/types';
 import { supabase } from '@/lib/supabase';
 import router from '@/router';
 
@@ -32,21 +42,21 @@ api.interceptors.response.use((response) => {
 });
 
 export const dashboardService = {
-  getLatest: () => api.get('/dashboard/latest'),
-  getHistory: () => api.get('/dashboard/history'),
-  getState: () => api.get('/dashboard/state'),
-  updateMode: (mode: 'AUTO' | 'MANUAL') => api.post('/dashboard/mode', { mode }),
-  postTelemetry: (data: any) => api.post('/iot/telemetry', data),
+  getLatest: (): Promise<AxiosResponse<DashboardLatestResponse>> => api.get('/dashboard/latest'),
+  getHistory: (): Promise<AxiosResponse<DashboardLatestResponse[] | { history: DashboardLatestResponse[] }>> => api.get('/dashboard/history'),
+  getState: (): Promise<AxiosResponse<DashboardStateResponse>> => api.get('/dashboard/state'),
+  updateMode: (mode: SystemMode): Promise<AxiosResponse<unknown>> => api.post('/dashboard/mode', { mode }),
+  postTelemetry: (data: TelemetryPayload): Promise<AxiosResponse<unknown>> => api.post('/iot/telemetry', data),
 };
 
 export const chatService = {
-  sendMessage: (message: string) => api.post('/chat', { message }),
-  getHistory: () => api.get('/chat/history'),
+  sendMessage: (message: string): Promise<AxiosResponse<ChatSendResponse>> => api.post('/chat', { message }),
+  getHistory: (): Promise<AxiosResponse<ChatHistoryResponse>> => api.get('/chat/history'),
 };
 
 export const systemService = {
-  checkHealth: () => api.get('/health'),
-  generateApiKey: (type: 'read' | 'write') => api.post(`/auth/keys?key_type=${type}`),
+  checkHealth: (): Promise<AxiosResponse<unknown>> => api.get('/health'),
+  generateApiKey: (type: ApiKeyType): Promise<AxiosResponse<ApiKeyResponse>> => api.post(`/auth/keys?key_type=${type}`),
 };
 
 export default api;
