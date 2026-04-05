@@ -36,7 +36,8 @@ export const useConversationsStore = defineStore('conversations', () => {
   }
 
   async function selectConversation(sessionId: string) {
-    if (activeSessionId.value === sessionId) return; // avoid re-fetching same session
+    // Only guard if we already have the messages loaded for this session
+    if (activeSessionId.value === sessionId && messages.value.length > 0) return;
     
     activeSessionId.value = sessionId;
     messages.value = [];
@@ -45,18 +46,32 @@ export const useConversationsStore = defineStore('conversations', () => {
 
     try {
       const response = await chatService.getHistory(sessionId);
-      if (response.data.history) {
-        messages.value = response.data.history.map((msg: ChatHistoryItem) => ({
+      
+      // Robust parsing: check for a 'history' key or a direct array
+      const historyItems = 
+        (response.data as any).history || 
+        (Array.isArray(response.data) ? response.data : []);
+
+      messages.value = historyItems.map((msg: ChatHistoryItem) => {
+        // SQL schema confirmation: 'user' or 'ai'
+        // But we add fallbacks for 'bot' and 'assistant' just in case
+        let mappedRole: 'user' | 'ai' = 'user';
+        const role = msg.role.toLowerCase();
+        if (role === 'ai' || role === 'bot' || role === 'assistant') {
+          mappedRole = 'ai';
+        }
+
+        return {
           id: msg.id,
-          role: msg.role === 'ai' ? 'ai' as const : 'user' as const,
+          role: mappedRole,
           message: msg.message,
           created_at: msg.created_at,
           session_id: sessionId,
-        }));
-      }
+        };
+      });
     } catch (err) {
       console.error('Error loading conversation history:', err);
-      error.value = 'Error al cargar el historial';
+      error.value = 'Error al cargar el historial. Reintenta pronto.';
     } finally {
       isLoading.value = false;
     }
