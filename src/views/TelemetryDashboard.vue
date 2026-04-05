@@ -79,7 +79,7 @@ onMounted(() => refreshData());
         <div v-if="loading && history.length === 0" class="ag-grid sm:ag-grid-2 md:ag-grid-3 lg:ag-desktop-grid-5 mb-8">
           <SkeletonCard v-for="i in 5" :key="i" />
         </div>
-        <div v-else class="ag-grid sm:ag-grid-2 md:ag-grid-3 lg:ag-desktop-grid-5 mb-8">
+        <div v-else class="ag-grid sm:ag-grid-2 md:ag-grid-3 lg:ag-desktop-grid-5 mb-8" :class="{ 'refreshing': loading && history.length > 0 }">
           <TelemetryCard label="Temperature" :value="latest?.temperature ?? '--'" unit="°C" :icon="thermometerOutline" color="red" :progress="calcProgress(latest?.temperature, 0, 40)" />
           <TelemetryCard label="Humidity" :value="latest?.humidity ?? '--'" unit="%" :icon="waterOutline" color="blue" :progress="latest?.humidity ?? 0" />
           <TelemetryCard label="pH Level" :value="latest?.ph ?? '--'" unit="pH" :icon="flaskOutline" color="purple" :progress="calcProgress(latest?.ph, 0, 14)" />
@@ -127,5 +127,11 @@ onMounted(() => refreshData());
 
 .alert-card {
   border-left: 4px solid var(--ag-red);
+}
+
+.refreshing {
+  opacity: 0.5;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
 }
 </style>

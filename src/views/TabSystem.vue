@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { 
   IonPage, IonHeader, IonToolbar, IonTitle, IonContent, 
-  IonButtons, IonMenuButton, IonButton, IonIcon 
+  IonButtons, IonMenuButton, IonIcon 
 } from '@ionic/vue';
-import { logOutOutline, pulseOutline, warningOutline } from 'ionicons/icons';
+import { pulseOutline, warningOutline } from 'ionicons/icons';
 import { onMounted } from 'vue';
 
 import { useSystemControls } from '@/composables/useSystemControls';
@@ -14,6 +14,7 @@ import ApiSecurityPanel from '@/components/system/ApiSecurityPanel.vue';
 import ActivityLog from '@/components/system/ActivityLog.vue';
 import ProfileSettings from '@/components/system/ProfileSettings.vue';
 
+
 const {
   mode,
   isOnline,
@@ -22,8 +23,7 @@ const {
   handleModeToggle,
   checkSystem,
   sendMock,
-  generateKey,
-  handleLogout
+  generateKey
 } = useSystemControls();
 
 onMounted(() => {
@@ -39,12 +39,7 @@ onMounted(() => {
         <ion-buttons slot="start">
           <ion-menu-button color="primary"></ion-menu-button>
         </ion-buttons>
-        <ion-title class="font-bold text-lg">System Control</ion-title>
-        <ion-buttons slot="end">
-          <ion-button @click="handleLogout" shape="round" color="danger">
-            <ion-icon :icon="logOutOutline" />
-          </ion-button>
-        </ion-buttons>
+        <ion-title class="font-bold text-lg">System & Hardware</ion-title>
       </ion-toolbar>
     </ion-header>
 

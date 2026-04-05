@@ -8,12 +8,27 @@ import {
   thermometerOutline, settingsOutline, checkmarkCircleOutline,
   timeOutline, arrowForwardOutline
 } from 'ionicons/icons';
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useAuthStore } from '@/stores/auth';
+import { useTelemetryStore } from '@/stores/telemetry';
 import { useRouter } from 'vue-router';
 
 const authStore = useAuthStore();
+const telemetryStore = useTelemetryStore();
 const router = useRouter();
+
+onMounted(() => {
+  telemetryStore.fetchLatest();
+});
+
+const lastSyncLabel = computed(() => {
+  if (!telemetryStore.latest?.timestamp) return 'Sin datos';
+  const diff = Date.now() - new Date(telemetryStore.latest.timestamp).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Justo ahora';
+  if (mins < 60) return `Hace ${mins}m`;
+  return `Hace ${Math.floor(mins / 60)}h`;
+});
 
 const greeting = computed(() => {
   const hour = new Date().getHours();
@@ -25,6 +40,8 @@ const greeting = computed(() => {
 const navigateTo = (path: string) => {
   router.push(path);
 };
+
+
 </script>
 
 <template>
@@ -67,7 +84,7 @@ const navigateTo = (path: string) => {
               <div class="flex items-center gap-4 text-sm text-muted">
                 <div class="flex items-center gap-1">
                   <ion-icon :icon="timeOutline" class="text-primary" />
-                  <span>Última sincronización: Hace 2m</span>
+                  <span>Última sincronización: {{ lastSyncLabel }}</span>
                 </div>
               </div>
             </div>
@@ -84,17 +101,26 @@ const navigateTo = (path: string) => {
             </div>
             <div class="flex gap-6">
               <div class="text-center">
-                <p class="text-2xl font-black">24°C</p>
+                <p v-if="telemetryStore.loading && !telemetryStore.latest" class="text-2xl font-black">
+                  <ion-skeleton-text animated style="width: 40px; height: 28px; margin: 0 auto;" />
+                </p>
+                <p v-else class="text-2xl font-black">{{ telemetryStore.latest?.temperature ?? '--' }}°C</p>
                 <p class="text-[10px] text-muted uppercase font-bold tracking-tighter">TEMP</p>
               </div>
               <div class="w-[1px] h-8 bg-white/5 self-center"></div>
               <div class="text-center">
-                <p class="text-2xl font-black">6.2</p>
+                <p v-if="telemetryStore.loading && !telemetryStore.latest" class="text-2xl font-black">
+                  <ion-skeleton-text animated style="width: 30px; height: 28px; margin: 0 auto;" />
+                </p>
+                <p v-else class="text-2xl font-black">{{ telemetryStore.latest?.ph ?? '--' }}</p>
                 <p class="text-[10px] text-muted uppercase font-bold tracking-tighter">pH</p>
               </div>
               <div class="w-[1px] h-8 bg-white/5 self-center"></div>
               <div class="text-center">
-                <p class="text-2xl font-black">1.8</p>
+                <p v-if="telemetryStore.loading && !telemetryStore.latest" class="text-2xl font-black">
+                  <ion-skeleton-text animated style="width: 35px; height: 28px; margin: 0 auto;" />
+                </p>
+                <p v-else class="text-2xl font-black">{{ telemetryStore.latest?.ec ?? '--' }}</p>
                 <p class="text-[10px] text-muted uppercase font-bold tracking-tighter">EC</p>
               </div>
             </div>

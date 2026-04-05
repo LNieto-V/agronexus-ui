@@ -16,7 +16,7 @@ defineEmits<{
 
 <template>
   <div class="security-section">
-    <div class="section-label">Security & API Access</div>
+    <div class="section-label">Hardware & Security Management</div>
 
     <!-- Main Card -->
     <div class="security-card">
@@ -27,8 +27,8 @@ defineEmits<{
           <ion-icon :icon="shieldCheckmarkOutline" class="header-icon" />
         </div>
         <div class="header-text">
-          <h4 class="header-title">Developer Gateway</h4>
-          <p class="header-desc">Provision secure API keys for external integrations & IoT protocols.</p>
+          <h4 class="header-title">Hardware Access Provisioning</h4>
+          <p class="header-desc">Provision secure API keys for ESP32 controllers & remote actuators.</p>
         </div>
       </div>
 

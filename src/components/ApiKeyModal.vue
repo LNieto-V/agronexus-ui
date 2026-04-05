@@ -43,7 +43,7 @@ const close = () => { modalController.dismiss(); };
       </div>
       <h2 class="text-2xl font-bold">API Key Generated</h2>
       <p class="text-sm text-muted mt-2">
-        Copy this key now. For your security, it will <strong>not be shown again</strong>.
+        This is the only time you'll see this master key. <strong>Copy it and burn it into your ESP32.</strong>
       </p>
     </div>
 
@@ -58,7 +58,7 @@ const close = () => { modalController.dismiss(); };
       <div class="ag-flex-row gap-3">
         <ion-icon :icon="warningOutline" class="text-yellow text-xl" />
         <p class="text-xs text-muted leading-relaxed">
-          Anyone with this key can access your agricultural data. Never share it or commit it to version control.
+          This key grants direct access to your greenhouse telemetry. Guard it like your harvest — never share it or commit it to version control.
         </p>
       </div>
     </div>

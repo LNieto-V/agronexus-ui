@@ -12,6 +12,7 @@
   --ag-bg: #09090b; /* Zinc 950 */
   --ag-card: #18181b; /* Zinc 900 */
   --ag-card-hover: #27272a; /* Zinc 800 */
+  --ag-card-soft: #141416; /* Zinc 900-950 intermediate — used for sub-panels */
   
   --ag-text: #f4f4f5; /* Zinc 50 */
   --ag-text-muted: #a1a1aa; /* Zinc 400 */

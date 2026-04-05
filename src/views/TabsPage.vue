@@ -1,23 +1,35 @@
 <script setup lang="ts">
 import { 
   IonIcon, IonPage, IonRouterOutlet, IonSplitPane, IonMenu, 
-  IonContent, IonList, IonItem, IonMenuToggle, IonLabel,
-  IonTabs, IonTabBar, IonTabButton
+  IonContent, IonList, IonItem, IonMenuToggle, IonLabel
 } from '@ionic/vue';
 import { 
   homeOutline,
   thermometerOutline, 
   chatbubbleEllipsesOutline, 
-  pulseOutline 
+  pulseOutline,
+  logOutOutline
 } from 'ionicons/icons';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
 
 const route = useRoute();
+const router = useRouter();
+const authStore = useAuthStore();
+
+async function handleLogout() {
+  try {
+    await authStore.signOut();
+    router.replace('/login');
+  } catch (err) {
+    console.error('Logout error', err);
+  }
+}
 </script>
 
 <template>
   <ion-page>
-    <ion-split-pane content-id="main-content" when="md">
+    <ion-split-pane content-id="main-content" when="xl">
       <!-- Premium Sidebar -->
       <ion-menu content-id="main-content" class="ag-sidebar">
         <ion-content class="sidebar-content">
@@ -77,6 +89,14 @@ const route = useRoute();
               </ion-item>
             </ion-menu-toggle>
           </ion-list>
+
+          <div class="sidebar-footer-nav">
+             <ion-item button @click="handleLogout" :detail="false" class="sidebar-item logout-item">
+                <ion-icon slot="start" :icon="logOutOutline" />
+                <ion-label>Cerrar Sesión</ion-label>
+             </ion-item>
+          </div>
+
           
           <div class="status-card">
             <p class="status-label">Core Status</p>
@@ -91,64 +111,16 @@ const route = useRoute();
         </ion-content>
       </ion-menu>
 
-      <!-- Main Content with Mobile Tabs -->
+      <!-- Main Content Area -->
       <div id="main-content" class="ion-page">
-        <ion-tabs>
-          <ion-router-outlet />
-          
-          <!-- Mobile Bottom Tab Bar (Visible only on small screens) -->
-          <ion-tab-bar slot="bottom" class="hide-on-desktop premium-tab-bar">
-            <ion-tab-button tab="home" href="/tabs/home">
-              <ion-icon :icon="homeOutline" />
-              <ion-label>Home</ion-label>
-            </ion-tab-button>
-
-            <ion-tab-button tab="dashboard" href="/tabs/dashboard">
-              <ion-icon :icon="thermometerOutline" />
-              <ion-label>Data</ion-label>
-            </ion-tab-button>
-
-            <ion-tab-button tab="assistant" href="/tabs/assistant">
-              <ion-icon :icon="chatbubbleEllipsesOutline" />
-              <ion-label>IA</ion-label>
-            </ion-tab-button>
-
-            <ion-tab-button tab="control" href="/tabs/control">
-              <ion-icon :icon="pulseOutline" />
-              <ion-label>System</ion-label>
-            </ion-tab-button>
-          </ion-tab-bar>
-        </ion-tabs>
+        <ion-router-outlet />
       </div>
+
     </ion-split-pane>
   </ion-page>
 </template>
 
 <style scoped>
-/* Mobile Tab Bar */
-.premium-tab-bar {
-  --background: var(--ag-card);
-  --border-top: 1px solid var(--ag-border);
-  height: 65px;
-  padding-bottom: 5px;
-  backdrop-filter: blur(20px);
-}
-
-ion-tab-button {
-  --color: var(--ag-text-muted);
-  --color-selected: var(--ag-primary);
-  transition: all 0.2s ease;
-}
-
-ion-tab-button ion-icon { font-size: 1.4rem; }
-
-ion-tab-button ion-label {
-  font-size: 0.65rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
 /* Sidebar */
 .sidebar-header {
   padding: 1.5rem;
@@ -219,6 +191,22 @@ ion-tab-button ion-label {
   font-weight: 700;
   letter-spacing: 0.5px;
 }
+
+.sidebar-footer-nav {
+  margin-top: auto;
+  padding: 0 0.75rem 1rem;
+}
+
+.logout-item {
+  --color: var(--ag-danger);
+  opacity: 0.8;
+}
+
+.logout-item ion-icon {
+  color: var(--ag-danger);
+  opacity: 1;
+}
+
 
 /* Status Card */
 .status-card {
@@ -291,4 +279,13 @@ ion-tab-button ion-label {
 
 @media (max-width: 767px) { .hide-on-mobile { display: none !important; } }
 @media (min-width: 768px) { .hide-on-desktop { display: none !important; } }
+
+/* Hide Sidebar Scrollbar Globally */
+.sidebar-content::v-deep(main.inner-scroll) {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.sidebar-content::v-deep(main.inner-scroll::-webkit-scrollbar) {
+  display: none;
+}
 </style>

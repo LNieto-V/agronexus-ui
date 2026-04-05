@@ -1,4 +1,4 @@
-import { computed, reactive, shallowRef } from 'vue';
+import { computed, onMounted, reactive } from 'vue';
 import { useSystemStore } from '@/stores/system';
 import { useTelemetryStore } from '@/stores/telemetry';
 import { useAuthStore } from '@/stores/auth';
@@ -13,17 +13,20 @@ export function useSystemControls() {
   const telemetryStore = useTelemetryStore();
   const authStore = useAuthStore();
   const router = useRouter();
-
+  
   const mode = computed(() => systemStore.mode);
   const isOnline = computed(() => systemStore.isOnline);
-
   const controls = reactive({ fan: false, light: true, water: false });
 
-  const logs = shallowRef([
-    { time: '12:30:15', tag: 'SYS', message: 'EC levels stabilized at 2.1 mS/cm.' },
-    { time: '11:15:02', tag: 'AI', message: 'Nutrient delivery schedule optimized.' },
-    { time: '09:00:00', tag: 'PWR', message: 'Growth lighting initialized.' }
-  ]);
+  const logs = computed(() => systemStore.logs);
+  
+  onMounted(async () => {
+    await Promise.all([
+      systemStore.fetchState(),
+      telemetryStore.fetchLatest(),
+      telemetryStore.fetchHistory()
+    ]);
+  });
 
   const handleModeToggle = async (checked: boolean) => {
     const newMode: SystemMode = checked ? 'AUTO' : 'MANUAL';
@@ -35,7 +38,33 @@ export function useSystemControls() {
   };
 
   const sendMock = async () => {
-    await telemetryStore.sendMockTelemetry();
+    try {
+      const { actions, alerts } = await telemetryStore.sendMockTelemetry();
+      
+      // Process alerts
+      alerts.forEach((alert: string) => {
+        systemStore.addLog('AI', `ALERT: ${alert}`);
+      });
+      
+      // Process actions
+      actions.forEach((action: any) => {
+        const msg = typeof action === 'string' ? action : (action.label || action.type || 'Action triggered');
+        systemStore.addLog('SYS', `ACTION: ${msg}`);
+      });
+
+      if (alerts.length === 0 && actions.length === 0) {
+        systemStore.addLog('SYS', 'Telemetry sent: No anomalies detected.');
+      }
+      
+      const toast = await toastController.create({
+        message: 'Mock telemetry sent successfully',
+        duration: 2000,
+        color: 'success'
+      });
+      await toast.present();
+    } catch (err) {
+      systemStore.addLog('ERR', 'Failed to send telemetry');
+    }
   };
 
   const generateKey = async (type: ApiKeyType) => {

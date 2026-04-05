@@ -35,11 +35,11 @@ const routes: Array<RouteRecordRaw> = [
       },
       {
         path: 'assistant',
-        component: () => import('@/views/AiAssistant.vue')
+        component: () => import('@/views/TabChat.vue')
       },
       {
         path: 'control',
-        component: () => import('@/views/SystemControl.vue')
+        component: () => import('@/views/TabSystem.vue')
       }
     ]
   }

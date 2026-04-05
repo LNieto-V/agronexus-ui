@@ -19,11 +19,19 @@ export interface TelemetryPayload {
 }
 
 /** Chat domain types */
+export interface Conversation {
+  id: string;           // UUID
+  title: string;        // Nombre visible en sidebar
+  created_at: string;   // ISO timestamp
+  updated_at: string;   // ISO timestamp (usado para ordenar)
+}
+
 export interface ChatMessage {
   id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: string;
+  role: 'user' | 'ai';
+  message: string;
+  created_at: string;
+  session_id: string | null;
 }
 
 export interface ChatHistoryItem {
@@ -31,6 +39,15 @@ export interface ChatHistoryItem {
   role: string;
   message: string;
   created_at: string;
+}
+
+export interface ChatRequest {
+  message: string;
+  session_id?: string | null;
+}
+
+export interface ConversationCreate {
+  title: string;
 }
 
 /** System domain types */
@@ -45,6 +62,7 @@ export interface ApiResponse<T> {
 
 export interface ChatSendResponse {
   response: string;
+  session_id?: string;
 }
 
 export interface ChatHistoryResponse {

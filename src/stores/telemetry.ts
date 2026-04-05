@@ -67,17 +67,23 @@ export const useTelemetryStore = defineStore('telemetry', () => {
 
   async function sendMockTelemetry() {
     const mockData = {
-      temperature: Math.floor(Math.random() * 5 + 20),
-      humidity: Math.floor(Math.random() * 20 + 60),
-      ph: parseFloat((Math.random() * 1 + 6).toFixed(2)),
-      ec: parseFloat((Math.random() * 0.5 + 1.5).toFixed(2)),
-      light: Math.floor(Math.random() * 200 + 800)
+      temperature: 38.5, // Explicitly trigger anomaly
+      humidity: 40,
+      ph: 6.5,
+      ec: 1.5,
+      light: 45000
     };
     
     try {
-      await dashboardService.postTelemetry(mockData);
+      const response = await dashboardService.postTelemetry(mockData);
+      const data = response.data as any;
+      return {
+        actions: data.actions || [],
+        alerts: data.alerts || []
+      };
     } catch (err: unknown) {
       error.value = err instanceof Error ? err.message : 'Error sending mock telemetry';
+      throw err;
     }
   }
 

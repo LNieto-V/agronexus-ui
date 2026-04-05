@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { shallowRef } from 'vue';
+import { shallowRef, ref } from 'vue';
 import { dashboardService, systemService } from '../services/api';
 import type { SystemMode } from '@/types';
 
@@ -9,6 +9,12 @@ export const useSystemStore = defineStore('system', () => {
   const lastCheck = shallowRef<string | null>(null);
   const loading = shallowRef(false);
   const error = shallowRef<string | null>(null);
+  const logs = ref<{ time: string; tag: string; message: string }[]>([]);
+
+  function addLog(tag: string, message: string) {
+    const time = new Date().toLocaleTimeString('en-GB', { hour12: false });
+    logs.value = [{ time, tag, message }, ...logs.value.slice(0, 49)];
+  }
 
   async function fetchState() {
     try {
@@ -45,5 +51,5 @@ export const useSystemStore = defineStore('system', () => {
     }
   }
 
-  return { mode, isOnline, lastCheck, loading, error, fetchState, updateMode, checkHealth };
+  return { mode, isOnline, lastCheck, loading, error, logs, fetchState, updateMode, checkHealth, addLog };
 });
