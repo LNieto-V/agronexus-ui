@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IonIcon, IonButton } from '@ionic/vue';
+import { IonIcon} from '@ionic/vue';
 import { 
   shieldCheckmarkOutline, 
   eyeOutline, 

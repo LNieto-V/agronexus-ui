@@ -87,7 +87,7 @@ const handleLogin = async () => {
       cssClass: 'premium-toast'
     });
     await toast.present();
-    router.replace('/tabs/tab1');
+    router.replace('/tabs/home');
   } catch (error: any) {
     const toast = await toastController.create({
       message: error.message || 'Authentication failed',
