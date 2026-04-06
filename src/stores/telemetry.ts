@@ -45,7 +45,7 @@ export const useTelemetryStore = defineStore('telemetry', () => {
         ec: (item.ec ?? item.e ?? 0) as number,
         light: (item.light ?? item.lux ?? item.l ?? 0) as number,
         timestamp: (item.timestamp || item.created_at || new Date().toISOString()) as string
-      }));
+      })).sort((a: TelemetryData, b: TelemetryData) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     } catch (err: unknown) {
       error.value = err instanceof Error ? err.message : 'Error fetching history';
     }
