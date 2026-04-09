@@ -1,73 +1,103 @@
 import { defineStore } from 'pinia';
-import { shallowRef, computed } from 'vue';
-import { supabase } from '@/lib/supabase';
-import type { User, Session } from '@supabase/supabase-js';
+import { shallowRef, computed, ref } from 'vue';
+import api, { userService } from '@/services/api';
+import type { LoginCredentials, LoginResponse, SignUpCredentials } from '@/types';
+
+const TOKEN_KEY = 'agronexus_token';
+const USER_KEY = 'agronexus_user';
 
 export const useAuthStore = defineStore('auth', () => {
-  const user = shallowRef<User | null>(null);
-  const session = shallowRef<Session | null>(null);
-  const loading = shallowRef(true);
+  const accessToken = shallowRef<string | null>(
+    localStorage.getItem(TOKEN_KEY)
+  );
+  
+  const user = ref<LoginResponse['user'] | null>(
+    JSON.parse(localStorage.getItem(USER_KEY) || 'null')
+  );
+
+  const loading = shallowRef(false);
   const initialized = shallowRef(false);
 
-  const isAuthenticated = computed(() => !!user.value);
-  const accessToken = computed(() => session.value?.access_token || null);
+  const isAuthenticated = computed(() => !!accessToken.value);
 
   const userDisplayName = computed(() => {
-    if (!user.value) return 'Farmer';
-    return user.value.user_metadata?.display_name || user.value.user_metadata?.full_name || user.value.email?.split('@')[0] || 'Farmer';
+    return user.value?.user_metadata?.display_name || user.value?.email?.split('@')[0] || 'Farmer';
   });
 
-  function setSession(newSession: Session | null) {
-    session.value = newSession;
-    user.value = newSession?.user || null;
-    loading.value = false;
-  }
-
-  async function updateProfile(updates: { display_name?: string }) {
-    const { data, error } = await supabase.auth.updateUser({
-      data: updates
-    });
-    if (error) throw error;
-    user.value = data.user;
-    return data;
+  function setSession(data: LoginResponse | null) {
+    if (data) {
+      accessToken.value = data.access_token;
+      user.value = data.user || null;
+      localStorage.setItem(TOKEN_KEY, data.access_token);
+      localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+    } else {
+      accessToken.value = null;
+      user.value = null;
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+    }
   }
 
   async function initialize() {
     if (initialized.value) return;
-
-    const { data } = await supabase.auth.getSession();
-    setSession(data.session);
-
-    supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-    });
-
     initialized.value = true;
     loading.value = false;
   }
 
-  async function signUp(credentials: { email: string; password: any; data?: any }) {
-    const { data, error } = await supabase.auth.signUp(credentials);
-    if (error) throw error;
-    return data;
+  async function signIn(credentials: LoginCredentials) {
+    loading.value = true;
+    try {
+      const response = await api.post<LoginResponse>('/auth/login', credentials);
+      setSession(response.data);
+      return response.data;
+    } catch (err) {
+      console.error('Login error:', err);
+      throw err;
+    } finally {
+      loading.value = false;
+    }
   }
 
-  async function signIn(credentials: { email: string; password: any }) {
-    const { data, error } = await supabase.auth.signInWithPassword(credentials);
-    if (error) throw error;
-    setSession(data.session);
-    return data;
+  async function signUp(credentials: SignUpCredentials) {
+    loading.value = true;
+    try {
+      const response = await api.post<LoginResponse>('/auth/register', credentials);
+      setSession(response.data);
+      return response.data;
+    } catch (err) {
+      console.error('Registration error:', err);
+      throw err;
+    } finally {
+      loading.value = false;
+    }
   }
 
   async function signOut() {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
     setSession(null);
   }
 
+  async function updateProfile(metadata: Record<string, unknown>) {
+    loading.value = true;
+    try {
+      await userService.updateProfile(metadata);
+      if (user.value) {
+        user.value.user_metadata = {
+          ...user.value.user_metadata,
+          ...metadata
+        };
+        localStorage.setItem(USER_KEY, JSON.stringify(user.value));
+      }
+    } catch (err) {
+      console.error('Update profile error:', err);
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  }
+
   return { 
-    user, session, loading, initialized, isAuthenticated, 
-    accessToken, userDisplayName, initialize, setSession, 
-    signUp, signIn, signOut, updateProfile 
+    accessToken, user, loading, initialized, 
+    isAuthenticated, userDisplayName, 
+    initialize, signIn, signUp, signOut, updateProfile 
   };
 });

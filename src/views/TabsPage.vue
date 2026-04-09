@@ -10,12 +10,19 @@ import {
   pulseOutline,
   logOutOutline
 } from 'ionicons/icons';
+import { onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { useTelemetrySSE } from '@/composables/useTelemetrySSE';
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const { connect: connectSSE } = useTelemetrySSE();
+
+onMounted(() => {
+  connectSSE();
+});
 
 async function handleLogout() {
   try {

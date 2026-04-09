@@ -12,7 +12,8 @@ const displayName = ref('');
 const loading = ref(false);
 
 onMounted(() => {
-  displayName.value = authStore.user?.user_metadata?.display_name || '';
+  const metadata = authStore.user?.user_metadata as Record<string, any>;
+  displayName.value = metadata?.display_name || '';
 });
 
 async function handleSave() {
@@ -79,9 +80,9 @@ async function handleSave() {
       </ion-button>
     </div>
 
-    <div v-if="authStore.user?.user_metadata?.display_name" class="mt-4 flex items-center gap-2 text-xs text-primary/80 animate-fade-in">
+    <div v-if="(authStore.user?.user_metadata as any)?.display_name" class="mt-4 flex items-center gap-2 text-xs text-primary/80 animate-fade-in">
       <ion-icon :icon="checkmarkCircleOutline" />
-      <span>Tu nombre actual es: <strong>{{ authStore.user.user_metadata.display_name }}</strong></span>
+      <span>Tu nombre actual es: <strong>{{ (authStore.user?.user_metadata as any).display_name }}</strong></span>
     </div>
   </div>
 </template>

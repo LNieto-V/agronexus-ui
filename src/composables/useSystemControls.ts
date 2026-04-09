@@ -5,12 +5,14 @@ import { useAuthStore } from '@/stores/auth';
 import { systemService } from '@/services/api';
 import { modalController, toastController } from '@ionic/vue';
 import ApiKeyModal from '@/components/ApiKeyModal.vue';
+import { useIotStore } from '@/stores/iotStore';
 import { useRouter } from 'vue-router';
 import type { ApiKeyType, SystemMode } from '@/types';
 
 export function useSystemControls() {
   const systemStore = useSystemStore();
   const telemetryStore = useTelemetryStore();
+  const iotStore = useIotStore();
   const authStore = useAuthStore();
   const router = useRouter();
   
@@ -19,6 +21,7 @@ export function useSystemControls() {
   const controls = reactive({ fan: false, light: true, water: false });
 
   const logs = computed(() => systemStore.logs);
+  const selectedZoneId = computed(() => iotStore.selectedZoneId);
   
   onMounted(async () => {
     await Promise.all([
@@ -69,7 +72,7 @@ export function useSystemControls() {
 
   const generateKey = async (type: ApiKeyType) => {
     try {
-      const response = await systemService.generateApiKey(type);
+      const response = await systemService.generateApiKey(type, selectedZoneId.value);
       const key = response.data.api_key;
 
       const modal = await modalController.create({

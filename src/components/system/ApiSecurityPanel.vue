@@ -1,13 +1,26 @@
 <script setup lang="ts">
-import { IonIcon} from '@ionic/vue';
+import { IonIcon } from '@ionic/vue';
 import { 
   shieldCheckmarkOutline, 
   eyeOutline, 
   flashOutline, 
   arrowForwardOutline,
-  lockClosedOutline
+  lockClosedOutline,
+  warningOutline
 } from 'ionicons/icons';
+import { computed } from 'vue';
+import { useIotStore } from '@/stores/iotStore';
 import type { ApiKeyType } from '@/types';
+
+const iotStore = useIotStore();
+
+const hasZoneSelected = computed(() => !!iotStore.selectedZoneId);
+
+const selectedZoneName = computed(() => {
+  if (!iotStore.selectedZoneId) return null;
+  const zone = iotStore.zones.find(z => z.id === iotStore.selectedZoneId);
+  return zone?.name || 'Unknown Zone';
+});
 
 defineEmits<{
   generate: [type: ApiKeyType]
@@ -16,7 +29,7 @@ defineEmits<{
 
 <template>
   <div class="security-section">
-    <div class="section-label">Hardware & Security Management</div>
+    <div class="section-label">Hardware &amp; Security Management</div>
 
     <!-- Main Card -->
     <div class="security-card">
@@ -28,7 +41,12 @@ defineEmits<{
         </div>
         <div class="header-text">
           <h4 class="header-title">Hardware Access Provisioning</h4>
-          <p class="header-desc">Provision secure API keys for ESP32 controllers & remote actuators.</p>
+          <p v-if="hasZoneSelected" class="header-desc">
+            Provision secure API keys for <strong class="text-primary">{{ selectedZoneName }}</strong>.
+          </p>
+          <p v-else class="header-desc">
+            Global scope — only <strong>read</strong> keys available. Select a zone for write access.
+          </p>
         </div>
       </div>
 
@@ -47,15 +65,19 @@ defineEmits<{
             <div class="tile-badge read-badge">READ ONLY</div>
           </div>
           <h5 class="tile-title">Telemetry Access</h5>
-          <p class="tile-desc">Read-only access to sensor data and historical telemetry. Safe for dashboards.</p>
-          <button class="tile-btn read-btn" @click="$emit('generate', 'read')">
+          <p class="tile-desc">Read-only access to sensor data and historical telemetry. Safe for dashboards and monitoring.</p>
+          <div v-if="!hasZoneSelected" class="scope-tag">GLOBAL SCOPE</div>
+          <button 
+            class="tile-btn read-btn" 
+            @click="$emit('generate', 'read')"
+          >
             Generate Key
             <ion-icon :icon="arrowForwardOutline" class="btn-icon" />
           </button>
         </div>
 
         <!-- Write Key -->
-        <div class="key-tile write">
+        <div class="key-tile write" :class="{ 'tile-locked': !hasZoneSelected }">
           <div class="key-tile-top">
             <div class="tile-icon write-icon">
               <ion-icon :icon="flashOutline" />
@@ -63,8 +85,15 @@ defineEmits<{
             <div class="tile-badge write-badge">FULL ACCESS</div>
           </div>
           <h5 class="tile-title">Full Control</h5>
-          <p class="tile-desc">Full access to actuators and system configuration. Elevated security required.</p>
-          <button class="tile-btn write-btn" @click="$emit('generate', 'write')">
+          <p class="tile-desc">Full access to actuators and system configuration. Requires a specific zone.</p>
+          <p v-if="!hasZoneSelected" class="lock-msg">
+            <ion-icon :icon="warningOutline" /> Select a zone first
+          </p>
+          <button 
+            class="tile-btn write-btn" 
+            :disabled="!hasZoneSelected"
+            @click="$emit('generate', 'write')"
+          >
             Generate Key
             <ion-icon :icon="arrowForwardOutline" class="btn-icon" />
           </button>
@@ -142,6 +171,18 @@ defineEmits<{
   line-height: 1.4;
 }
 
+.header-warning {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--ag-yellow);
+}
+
+.warning-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
 /* ── Divider ── */
 .card-divider {
   height: 1px;
@@ -155,6 +196,12 @@ defineEmits<{
   grid-template-columns: 1fr 1fr;
   gap: 1px;
   background: var(--ag-border);
+  transition: opacity 0.3s ease;
+}
+
+.disabled-grid {
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 @media (max-width: 540px) {
@@ -254,11 +301,16 @@ defineEmits<{
   align-self: flex-start;
 }
 
+.tile-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 .read-btn {
   color: var(--ag-blue);
   border-color: rgba(59, 130, 246, 0.25);
 }
-.read-btn:hover {
+.read-btn:hover:not(:disabled) {
   background: rgba(59, 130, 246, 0.08);
   border-color: rgba(59, 130, 246, 0.5);
 }
@@ -267,7 +319,7 @@ defineEmits<{
   color: var(--ag-orange);
   border-color: rgba(249, 115, 22, 0.25);
 }
-.write-btn:hover {
+.write-btn:hover:not(:disabled) {
   background: rgba(249, 115, 22, 0.08);
   border-color: rgba(249, 115, 22, 0.5);
 }
@@ -276,7 +328,7 @@ defineEmits<{
   font-size: 0.85rem;
   transition: transform 0.2s ease;
 }
-.tile-btn:hover .btn-icon { transform: translateX(3px); }
+.tile-btn:hover:not(:disabled) .btn-icon { transform: translateX(3px); }
 
 /* ── Footer ── */
 .security-footer {
@@ -299,5 +351,37 @@ defineEmits<{
   font-weight: 600;
   letter-spacing: 0.05em;
   color: var(--ag-text-muted);
+}
+
+/* ── Zone-scoped states ── */
+.scope-tag {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  background: rgba(var(--ag-primary-rgb), 0.1);
+  color: var(--ag-primary);
+  border: 1px solid rgba(var(--ag-primary-rgb), 0.2);
+  align-self: flex-start;
+}
+
+.tile-locked {
+  opacity: 0.45;
+}
+
+.lock-msg {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ag-yellow);
+  margin: 0;
+}
+
+.lock-msg ion-icon {
+  font-size: 0.85rem;
 }
 </style>

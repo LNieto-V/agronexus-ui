@@ -3,7 +3,7 @@ import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonContent, 
   IonButtons, IonButton, IonIcon, IonFooter, IonInput, 
   actionSheetController, alertController,
-  IonMenuButton, IonModal
+  IonMenuButton, IonModal, IonInfiniteScroll, IonInfiniteScrollContent
 } from '@ionic/vue';
 import { 
   sparklesOutline, 
@@ -30,6 +30,7 @@ const loading = computed(() => store.isLoading);
 const sending = computed(() => store.isSending);
 const conversations = computed(() => store.conversations);
 const activeSessionId = computed(() => store.activeSessionId);
+const chatHasMore = computed(() => store.chatHasMore);
 const isHistoryModalOpen = ref(false);
 
 const renderMarkdown = (text: string) => { 
@@ -47,10 +48,18 @@ const scrollToBottom = async (behavior: ScrollBehavior = 'smooth') => {
   }
 };
 
-// Auto-scroll when messages change or typing indicator appears
-watch([messages, loading, sending], () => {
-  scrollToBottom();
-}, { deep: true });
+// Auto-scroll when new messages arrive or status changes
+watch([() => messages.value.length, sending, loading], (newVal, oldVal) => {
+  const [newLen, newSending, newLoading] = newVal;
+  const [oldLen, oldSending, oldLoading] = oldVal || [];
+  
+  // If we just added messages AND it's not history loading (history prepends)
+  // Or if we started/stopped sending
+  if (newLen > (oldLen || 0) || newSending !== oldSending || newLoading !== oldLoading) {
+    // Only scroll to bottom if the last message is new (not history prepended)
+    scrollToBottom();
+  }
+});
 
 onMounted(async () => {
   await store.fetchConversations();
@@ -60,6 +69,14 @@ onMounted(async () => {
   await nextTick();
   setTimeout(() => scrollToBottom('auto'), 100);
 });
+
+async function handleLoadMore(event: any) {
+  await store.loadMoreMessages();
+  event.target.complete();
+  
+  // Optional: preserve scroll position after loading older messages
+  // This is tricky with IonContent, but usually it handles it or we do it manually
+}
 
 async function handleSend() {
   if (!input.value.trim() || sending.value) return;
@@ -253,6 +270,14 @@ const formatDate = (dateStr: string) => {
 
           <!-- Chat History -->
           <div class="messages-list" :key="activeSessionId || 'empty'">
+            <ion-infinite-scroll 
+              position="top" 
+              @ionInfinite="handleLoadMore($event)"
+              :disabled="!chatHasMore"
+            >
+              <ion-infinite-scroll-content loading-spinner="crescent"></ion-infinite-scroll-content>
+            </ion-infinite-scroll>
+
             <div v-for="msg in messages" :key="msg.id" :class="['message-wrapper', msg.role]">
               <div class="message-bubble">
                 <div class="markdown-body" v-html="renderMarkdown(msg.message)"></div>

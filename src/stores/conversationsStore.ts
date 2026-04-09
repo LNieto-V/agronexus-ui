@@ -1,6 +1,10 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { conversationService, chatService } from '@/services/api';
+import { useSystemStore } from '@/stores/system';
+import { useIotStore } from '@/stores/iotStore';
+import { useActuatorBus } from '@/composables/useActuatorBus';
+import { toastController } from '@ionic/vue';
 import type { Conversation, ChatMessage, ChatHistoryItem } from '@/types';
 
 export const useConversationsStore = defineStore('conversations', () => {
@@ -10,6 +14,13 @@ export const useConversationsStore = defineStore('conversations', () => {
   const isLoading = ref(false);
   const isSending = ref(false);
   const error = ref<string | null>(null);
+
+  // --- Pagination ---
+  const chatPage = ref(0);
+  const chatHasMore = ref(true);
+  const CHAT_PAGE_SIZE = 50;
+
+  const { emitActuatorActions } = useActuatorBus();
 
   // --- Actions ---
 
@@ -35,43 +46,72 @@ export const useConversationsStore = defineStore('conversations', () => {
     }
   }
 
+  function mapHistoryItem(msg: ChatHistoryItem, sessionId: string): ChatMessage {
+    let mappedRole: 'user' | 'ai' = 'user';
+    const role = msg.role.toLowerCase();
+    if (role === 'ai' || role === 'bot' || role === 'assistant') {
+      mappedRole = 'ai';
+    }
+
+    return {
+      id: msg.id,
+      role: mappedRole,
+      message: msg.message,
+      created_at: msg.created_at,
+      session_id: sessionId,
+    };
+  }
+
   async function selectConversation(sessionId: string) {
-    // Only guard if we already have the messages loaded for this session
     if (activeSessionId.value === sessionId && messages.value.length > 0) return;
     
     activeSessionId.value = sessionId;
     messages.value = [];
     isLoading.value = true;
     error.value = null;
+    chatPage.value = 0;
+    chatHasMore.value = true;
 
     try {
-      const response = await chatService.getHistory(sessionId);
+      const response = await chatService.getHistory(sessionId, CHAT_PAGE_SIZE, 0);
       
-      // Robust parsing: check for a 'history' key or a direct array
       const historyItems = 
         (response.data as any).history || 
         (Array.isArray(response.data) ? response.data : []);
 
-      messages.value = historyItems.map((msg: ChatHistoryItem) => {
-        // SQL schema confirmation: 'user' or 'ai'
-        // But we add fallbacks for 'bot' and 'assistant' just in case
-        let mappedRole: 'user' | 'ai' = 'user';
-        const role = msg.role.toLowerCase();
-        if (role === 'ai' || role === 'bot' || role === 'assistant') {
-          mappedRole = 'ai';
-        }
+      if (historyItems.length < CHAT_PAGE_SIZE) {
+        chatHasMore.value = false;
+      }
 
-        return {
-          id: msg.id,
-          role: mappedRole,
-          message: msg.message,
-          created_at: msg.created_at,
-          session_id: sessionId,
-        };
-      });
+      messages.value = historyItems.map((msg: ChatHistoryItem) => mapHistoryItem(msg, sessionId));
+      chatPage.value = 1;
     } catch (err) {
       console.error('Error loading conversation history:', err);
       error.value = 'Error al cargar el historial. Reintenta pronto.';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function loadMoreMessages() {
+    if (!chatHasMore.value || isLoading.value || !activeSessionId.value) return;
+    
+    isLoading.value = true;
+    const offset = chatPage.value * CHAT_PAGE_SIZE;
+    
+    try {
+      const response = await chatService.getHistory(activeSessionId.value, CHAT_PAGE_SIZE, offset);
+      const items = (response.data as any).history || (Array.isArray(response.data) ? response.data : []);
+      
+      if (items.length < CHAT_PAGE_SIZE) {
+        chatHasMore.value = false;
+      }
+      
+      const mapped = items.map((msg: ChatHistoryItem) => mapHistoryItem(msg, activeSessionId.value!));
+      messages.value = [...mapped, ...messages.value];
+      chatPage.value++;
+    } catch (err) {
+      console.error('Error loading more messages:', err);
     } finally {
       isLoading.value = false;
     }
@@ -131,10 +171,11 @@ export const useConversationsStore = defineStore('conversations', () => {
 
     try {
       const response = await chatService.sendMessage(text, activeSessionId.value);
+      const chatResp = response.data;
 
       // If backend returned a session_id and we didn't have one, adopt it
-      if (response.data.session_id && !activeSessionId.value) {
-        activeSessionId.value = response.data.session_id;
+      if (chatResp.session_id && !activeSessionId.value) {
+        activeSessionId.value = chatResp.session_id;
         await fetchConversations();
       }
 
@@ -142,11 +183,44 @@ export const useConversationsStore = defineStore('conversations', () => {
       const aiMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'ai',
-        message: response.data.response,
+        message: chatResp.response,
         created_at: new Date().toISOString(),
         session_id: activeSessionId.value,
       };
       messages.value = [...messages.value, aiMsg];
+
+      // Process actions
+      if (chatResp.actions && chatResp.actions.length > 0) {
+        const systemStore = useSystemStore();
+        const iotStore = useIotStore();
+        chatResp.actions.forEach((action) => {
+          systemStore.addLog(
+            'AI', 
+            `CMD: ${action.device} → ${action.action} | ${action.reason}`
+          );
+          iotStore.addOptimisticLog({
+            device: action.device,
+            action: action.action,
+            reason: action.reason
+          });
+        });
+        emitActuatorActions(chatResp.actions);
+      }
+
+      // Process alerts
+      if (chatResp.alerts && chatResp.alerts.length > 0) {
+        const systemStore = useSystemStore();
+        chatResp.alerts.forEach(async (alert) => {
+          const toast = await toastController.create({
+            message: `⚠️ ${alert}`,
+            duration: 4000,
+            color: 'warning',
+            position: 'top',
+          });
+          await toast.present();
+          systemStore.addLog('ALERT', alert);
+        });
+      }
 
       // Update sidebar timestamp so the active session bubbles to the top
       if (activeSessionId.value) {
@@ -192,5 +266,7 @@ export const useConversationsStore = defineStore('conversations', () => {
     deleteConversation,
     clearActiveSession,
     sendMessage,
+    loadMoreMessages,
+    chatHasMore
   };
 });

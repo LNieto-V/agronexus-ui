@@ -2,6 +2,8 @@
 import { IonIcon, IonToggle } from '@ionic/vue';
 import { snowOutline, sunnyOutline, waterOutline } from 'ionicons/icons';
 import type { SystemMode } from '@/types';
+import { computed } from 'vue';
+import { useActuatorBus } from '@/composables/useActuatorBus';
 
 defineProps<{
   mode: SystemMode;
@@ -13,6 +15,18 @@ const emit = defineEmits<{
   'update:light': [value: boolean];
   'update:water': [value: boolean];
 }>();
+
+const { pendingActions } = useActuatorBus();
+
+const isFanPending = computed(() => 
+  pendingActions.value.some(a => (a.device === 'VENTILADOR' || a.device === 'FAN') && a.action === 'ON')
+);
+const isLightPending = computed(() => 
+  pendingActions.value.some(a => (a.device === 'LUZ' || a.device === 'LIGHT') && a.action === 'ON')
+);
+const isWaterPending = computed(() => 
+  pendingActions.value.some(a => (a.device === 'BOMBA' || a.device === 'WATER' || a.device === 'PUMP') && a.action === 'ON')
+);
 </script>
 
 <template>
@@ -27,7 +41,7 @@ const emit = defineEmits<{
       </div>
 
       <!-- Fan -->
-      <div class="control-row" :class="{ 'is-on': controls.fan, 'is-locked': mode === 'AUTO' }">
+      <div class="control-row" :class="{ 'is-on': controls.fan, 'is-locked': mode === 'AUTO', 'pulse-green': isFanPending }">
         <div class="control-left">
           <div class="control-icon" :class="controls.fan ? 'icon-blue' : 'icon-off'">
             <ion-icon :icon="snowOutline" />
@@ -48,7 +62,7 @@ const emit = defineEmits<{
       <div class="row-divider"></div>
 
       <!-- Light -->
-      <div class="control-row" :class="{ 'is-on': controls.light, 'is-locked': mode === 'AUTO' }">
+      <div class="control-row" :class="{ 'is-on': controls.light, 'is-locked': mode === 'AUTO', 'pulse-green': isLightPending }">
         <div class="control-left">
           <div class="control-icon" :class="controls.light ? 'icon-yellow' : 'icon-off'">
             <ion-icon :icon="sunnyOutline" />
@@ -69,7 +83,7 @@ const emit = defineEmits<{
       <div class="row-divider"></div>
 
       <!-- Water -->
-      <div class="control-row" :class="{ 'is-on': controls.water, 'is-locked': mode === 'AUTO' }">
+      <div class="control-row" :class="{ 'is-on': controls.water, 'is-locked': mode === 'AUTO', 'pulse-green': isWaterPending }">
         <div class="control-left">
           <div class="control-icon" :class="controls.water ? 'icon-green' : 'icon-off'">
             <ion-icon :icon="waterOutline" />
@@ -203,5 +217,15 @@ const emit = defineEmits<{
   height: 1px;
   background: var(--ag-border);
   margin: 0 1.25rem;
+}
+
+@keyframes pulseGreen {
+  0%, 100% { box-shadow: inset 0 0 0 0 rgba(34, 197, 94, 0); background: transparent; }
+  50% { box-shadow: inset 0 0 0 2px rgba(34, 197, 94, 0.4); background: rgba(34, 197, 94, 0.05); }
+}
+
+.pulse-green {
+  animation: pulseGreen 1s ease-in-out infinite;
+  opacity: 1 !important; /* Force visible even if locked */
 }
 </style>

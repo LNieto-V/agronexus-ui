@@ -1,13 +1,25 @@
 <script setup lang="ts">
+import { IonInfiniteScroll, IonInfiniteScrollContent } from '@ionic/vue';
+import type { ActuatorLogEntry } from '@/types';
+
 defineProps<{
-  logs: { time: string; tag: string; message: string }[]
+  logs: ActuatorLogEntry[];
+  hasMore: boolean;
 }>();
 
-const tagColor = (tag: string) => {
-  if (tag === 'AI') return 'tag-ai';
-  if (tag === 'SYS') return 'tag-sys';
-  if (tag === 'PWR') return 'tag-pwr';
+const emit = defineEmits<{
+  'infinite': [event: any];
+}>();
+
+const tagColor = (device: string) => {
+  if (device === 'BOMBA' || device === 'WATER' || device === 'PUMP') return 'tag-pwr';
+  if (device === 'VENTILADOR' || device === 'FAN') return 'tag-sys';
+  if (device === 'LUZ' || device === 'LIGHT') return 'tag-ai';
   return 'tag-default';
+};
+
+const formatTime = (iso: string) => {
+  return new Date(iso).toLocaleTimeString('en-GB', { hour12: false });
 };
 </script>
 
@@ -33,12 +45,20 @@ const tagColor = (tag: string) => {
 
       <!-- Entries -->
       <div class="log-body">
-        <div v-for="(log, i) in logs" :key="i" class="log-entry">
-          <span class="log-time">{{ log.time }}</span>
-          <span class="log-tag" :class="tagColor(log.tag)">{{ log.tag }}</span>
-          <span class="log-msg">{{ log.message }}</span>
+        <div v-for="log in logs" :key="log.id" class="log-entry">
+          <span class="log-time">{{ formatTime(log.created_at) }}</span>
+          <span class="log-tag" :class="tagColor(log.device)">{{ log.device }}</span>
+          <span class="log-msg">{{ log.action }}: {{ log.reason }}</span>
         </div>
         <div v-if="logs.length === 0" class="log-empty">No events recorded.</div>
+
+        <ion-infinite-scroll 
+          @ionInfinite="emit('infinite', $event)"
+          :disabled="!hasMore"
+          threshold="100px"
+        >
+          <ion-infinite-scroll-content loading-spinner="crescent"></ion-infinite-scroll-content>
+        </ion-infinite-scroll>
       </div>
     </div>
   </div>

@@ -9,20 +9,26 @@ export const useTelemetryStore = defineStore('telemetry', () => {
   const loading = shallowRef(false);
   const error = shallowRef<string | null>(null);
 
-  async function fetchLatest() {
+  async function fetchLatest(zoneId?: string | null) {
     loading.value = true;
     try {
-      const response = await dashboardService.getLatest();
+      const response = await dashboardService.getLatest(zoneId);
       
       const raw = response.data.sensor_data || response.data;
       
+      // Si el objeto está vacío, no tenemos telemetría real
+      if (!raw || Object.keys(raw).length === 0 || (raw.id === undefined && raw.temperature === undefined)) {
+        latest.value = null;
+        return;
+      }
+      
       latest.value = {
-        temperature: (raw.temperature ?? raw.temp ?? raw.t ?? 0) as number,
-        humidity: (raw.humidity ?? raw.hum ?? raw.h ?? 0) as number,
-        ph: (raw.ph ?? raw.p ?? 0) as number,
-        ec: (raw.ec ?? raw.e ?? 0) as number,
-        light: (raw.light ?? raw.lux ?? raw.l ?? 0) as number,
-        timestamp: response.data.timestamp || new Date().toISOString()
+        temperature: (raw.temperature ?? raw.temp ?? raw.t) as number,
+        humidity: (raw.humidity ?? raw.hum ?? raw.h) as number,
+        ph: (raw.ph ?? raw.p) as number,
+        ec: (raw.ec ?? raw.e) as number,
+        light: (raw.light ?? raw.lux ?? raw.l) as number,
+        timestamp: response.data.timestamp || raw.created_at || new Date().toISOString()
       };
     } catch (err: unknown) {
       error.value = err instanceof Error ? err.message : 'Error fetching latest data';
@@ -31,9 +37,9 @@ export const useTelemetryStore = defineStore('telemetry', () => {
     }
   }
 
-  async function fetchHistory() {
+  async function fetchHistory(zoneId?: string | null) {
     try {
-      const response = await dashboardService.getHistory();
+      const response = await dashboardService.getHistory(zoneId);
       
       const responseData = response.data as any;
       const rawHistory = Array.isArray(responseData) ? responseData : (responseData.history || []);

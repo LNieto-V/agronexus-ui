@@ -1,24 +1,36 @@
 <script setup lang="ts">
 import { 
-  IonPage, IonHeader, IonToolbar, IonTitle, IonContent, 
-  IonButtons, IonButton, IonIcon, IonMenuButton 
+  IonButtons, IonButton, IonIcon, IonMenuButton,
+  IonSelect, IonSelectOption
 } from '@ionic/vue';
 import { 
   thermometerOutline, waterOutline, flaskOutline, leafOutline, 
   refreshOutline, warningOutline, sunnyOutline 
 } from 'ionicons/icons';
-import { onMounted, computed, shallowRef } from 'vue';
+import { onMounted, computed, shallowRef, watch } from 'vue';
 import { useTelemetryStore } from '@/stores/telemetry';
 import { useTelemetry } from '@/composables/useTelemetry';
 import TelemetryCard from '@/components/TelemetryCard.vue';
 import TrendsChart from '@/components/TrendsChart.vue';
 import SkeletonCard from '@/components/SkeletonCard.vue';
 import SegmentedControl from '@/components/SegmentedControl.vue';
+import { useIotStore } from '@/stores/iotStore';
+import { useActuatorBus } from '@/composables/useActuatorBus';
 import type { TelemetryKey } from '@/types';
 
 const store = useTelemetryStore();
+const iotStore = useIotStore();
 const { latest, loading, history } = useTelemetry();
+const { pendingActions } = useActuatorBus();
 const timeRange = shallowRef('5h');
+
+const isBombaActive = computed(() =>
+  pendingActions.value.some(a => (a.device === 'BOMBA' || a.device === 'WATER') && a.action === 'ON')
+);
+
+const isVentiladorActive = computed(() =>
+  pendingActions.value.some(a => (a.device === 'VENTILADOR' || a.device === 'FAN') && a.action === 'ON')
+);
 
 const getChartHistory = (key: TelemetryKey) => {
   return history.value.map(h => ({
@@ -39,10 +51,20 @@ const calcProgress = (val: number | undefined, min: number, max: number) => {
 };
 
 const refreshData = async () => {
-  await Promise.all([store.fetchLatest(), store.fetchHistory()]);
+  await Promise.all([
+    store.fetchLatest(iotStore.selectedZoneId), 
+    store.fetchHistory(iotStore.selectedZoneId)
+  ]);
 };
 
-onMounted(() => refreshData());
+watch(() => iotStore.selectedZoneId, () => {
+  refreshData();
+});
+
+onMounted(() => {
+  refreshData();
+  iotStore.fetchZones();
+});
 </script>
 
 <template>
@@ -71,8 +93,37 @@ onMounted(() => refreshData());
               <span class="status-dot bg-primary"></span>
               <p class="text-sm font-medium text-muted">System Online &bull; Live Sensors</p>
             </div>
+            <div class="actuators-status ag-flex-row gap-3 mt-3">
+              <div class="actuator-badge" :class="{ 'pulse-green': isBombaActive }">
+                <ion-icon :icon="waterOutline" />
+                <span>Pump</span>
+              </div>
+              <div class="actuator-badge" :class="{ 'pulse-green': isVentiladorActive }">
+                <ion-icon :icon="leafOutline" />
+                <span>Fan</span>
+              </div>
+            </div>
           </div>
-          <SegmentedControl v-model="timeRange" :options="['1h', '5h', '24h']" />
+          <div class="ag-flex-row gap-4">
+            <div class="zone-selector-wrapper">
+              <ion-select 
+                v-model="iotStore.selectedZoneId" 
+                placeholder="All Greenhouse Zones"
+                interface="popover"
+                class="premium-select"
+              >
+                <ion-select-option :value="null">All Greenhouse Zones</ion-select-option>
+                <ion-select-option 
+                  v-for="zone in iotStore.zones" 
+                  :key="zone.id" 
+                  :value="zone.id"
+                >
+                  {{ zone.name }}
+                </ion-select-option>
+              </ion-select>
+            </div>
+            <SegmentedControl v-model="timeRange" :options="['1h', '5h', '24h']" />
+          </div>
         </div>
 
         <!-- Telemetry Grid -->
@@ -133,5 +184,35 @@ onMounted(() => refreshData());
   opacity: 0.5;
   transition: opacity 0.3s ease;
   pointer-events: none;
+}
+
+.actuator-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  background: var(--ag-card);
+  border: 1px solid var(--ag-border);
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--ag-text-muted);
+  transition: all 0.3s ease;
+}
+
+.actuator-badge ion-icon {
+  font-size: 0.9rem;
+}
+
+@keyframes pulseGreen {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+  50% { box-shadow: 0 0 0 12px rgba(34, 197, 94, 0.3); }
+}
+
+.pulse-green {
+  animation: pulseGreen 1s ease-in-out infinite;
+  border-color: #22c55e !important;
+  color: #22c55e !important;
+  background: rgba(34, 197, 94, 0.1) !important;
 }
 </style>

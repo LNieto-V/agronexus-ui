@@ -18,6 +18,26 @@ export interface TelemetryPayload {
   light: number;
 }
 
+/** IoT domain types — New */
+export interface Zone {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export interface ActuatorLogEntry {
+  id: string;
+  device: string;      // "BOMBA", "VENTILADOR", "LUZ"
+  action: string;      // "ON", "OFF"
+  reason: string;
+  created_at: string;
+}
+
+export interface ActuatorLogResponse {
+  logs: ActuatorLogEntry[];
+  total: number;
+}
+
 /** Chat domain types */
 export interface Conversation {
   id: string;           // UUID
@@ -50,6 +70,28 @@ export interface ConversationCreate {
   title: string;
 }
 
+/** Auth domain types — New */
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  access_token: string;
+  token_type: string;       // "bearer"
+  user?: {
+    id: string;
+    email: string;
+    user_metadata?: Record<string, unknown>;
+  };
+}
+
+export interface SignUpCredentials {
+  email: string;
+  password: string;
+  data?: Record<string, unknown>;
+}
+
 /** System domain types */
 export type SystemMode = 'AUTO' | 'MANUAL';
 export type ApiKeyType = 'read' | 'write';
@@ -60,8 +102,17 @@ export interface ApiResponse<T> {
   status: number;
 }
 
-export interface ChatSendResponse {
-  response: string;
+/** Updated Chat response — New */
+export interface AiAction {
+  device: string;      // "BOMBA", "VENTILADOR"
+  action: string;      // "ON", "OFF"
+  reason: string;
+}
+
+export interface ChatResponse {
+  response: string;    // Texto del agrónomo IA
+  actions: AiAction[]; // Comandos para actuadores
+  alerts: string[];    // Mensajes de advertencia
   session_id?: string;
 }
 
