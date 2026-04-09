@@ -4,7 +4,7 @@ import { dashboardService, systemService } from '../services/api';
 import type { SystemMode } from '@/types';
 
 export const useSystemStore = defineStore('system', () => {
-  const mode = shallowRef<SystemMode>('AUTO');
+  const mode = shallowRef<SystemMode | null>(null);
   const isOnline = shallowRef(true);
   const lastCheck = shallowRef<string | null>(null);
   const loading = shallowRef(false);
@@ -19,11 +19,13 @@ export const useSystemStore = defineStore('system', () => {
   async function fetchState() {
     try {
       const response = await dashboardService.getState();
-      mode.value = response.data.mode || 'AUTO';
+      // El backend ahora devuelve 'mode' mapeado correctamente
+      mode.value = response.data.mode;
       isOnline.value = true;
     } catch (err: unknown) {
       isOnline.value = false;
       error.value = err instanceof Error ? err.message : 'Error fetching system state';
+      if (!mode.value) mode.value = 'AUTO'; // Fallback solo si falló la carga inicial
     }
   }
 
