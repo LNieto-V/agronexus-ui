@@ -83,7 +83,8 @@ export const useConversationsStore = defineStore('conversations', () => {
         chatHasMore.value = false;
       }
 
-      messages.value = historyItems.map((msg: ChatHistoryItem) => mapHistoryItem(msg, sessionId));
+      const mapped = historyItems.map((msg: ChatHistoryItem) => mapHistoryItem(msg, sessionId));
+      messages.value = mapped.reverse();
       chatPage.value = 1;
     } catch (err) {
       console.error('Error loading conversation history:', err);
@@ -108,7 +109,7 @@ export const useConversationsStore = defineStore('conversations', () => {
       }
       
       const mapped = items.map((msg: ChatHistoryItem) => mapHistoryItem(msg, activeSessionId.value!));
-      messages.value = [...mapped, ...messages.value];
+      messages.value = [...mapped.reverse(), ...messages.value];
       chatPage.value++;
     } catch (err) {
       console.error('Error loading more messages:', err);
