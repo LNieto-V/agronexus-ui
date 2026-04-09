@@ -4,7 +4,7 @@ import { dashboardService, systemService } from '../services/api';
 import type { SystemMode } from '@/types';
 
 export const useSystemStore = defineStore('system', () => {
-  const mode = shallowRef<SystemMode | null>(null);
+  const mode = shallowRef<SystemMode>('AUTO');
   const isOnline = shallowRef(true);
   const lastCheck = shallowRef<string | null>(null);
   const loading = shallowRef(false);
@@ -25,7 +25,6 @@ export const useSystemStore = defineStore('system', () => {
     } catch (err: unknown) {
       isOnline.value = false;
       error.value = err instanceof Error ? err.message : 'Error fetching system state';
-      if (!mode.value) mode.value = 'AUTO'; // Fallback solo si falló la carga inicial
     }
   }
 
