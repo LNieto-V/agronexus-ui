@@ -1,97 +1,420 @@
-# 🌾 AgroNexus AI - Frontend AgTech Dashboard
+# 🌾 AgroNexus AI — Frontend Technical Documentation
 
-AgroNexus AI es una plataforma **SaaS tipo AgTech (Tecnología Agrícola)** premium y moderna diseñada para el control total de infraestructuras de cultivo inteligente. Basada en una arquitectura de microservicios y diseño *glassmorphism*, ofrece una experiencia fluida tanto en web como en dispositivos móviles.
-
----
-
-## 🚀 Características Principales
-
-### 🌿 Gestión de Infraestructura por Zonas (NUEVO)
-- **Control Granular**: Organiza tu invernadero por zonas (ej: Invernadero Beta, Zona Hidropónica 1).
-- **CRUD Completo**: Crea, edita y elimina zonas de cultivo directamente desde el Dashboard.
-- **Filtrado Inteligente**: Visualiza telemetría y logs de actuadores de forma global o filtrada por una zona específica.
-
-### 🔴 Dashboard con Telemetría en Tiempo Real
-- **Métricas Críticas**: Monitoreo de Temperatura, Humedad, pH, EC (Electroconductividad) e Intensidad Lumínica.
-- **Gráficos de Tendencias**: Visualización histórica mediante Chart.js para análisis de ciclos de cultivo.
-- **Integración SSE**: Telemetría en tiempo real mediante *Server-Sent Events* para una latencia mínima.
-
-### 🤖 Asistente de IA (Brain Orchestrator)
-- **Gestión de Sesiones**: Sistema multi-sesión para consultas técnicas agrícolas.
-- **Control de Actuadores**: La IA puede sugerir o ejecutar comandos basados en anomalías detectadas.
-- **Markdown Premium**: Soporte completo para tablas técnicas, alertas y bloques de código.
-
-### 🛡️ Seguridad y Provisionamiento de Hardware
-- **Modelos de Seguridad Per-Zona**: Las API Keys de escritura (`Write`) están estrictamente vinculadas a una zona para evitar riesgos de seguridad global.
-- **Llaves de Lectura Global**: Posibilidad de generar llaves `Read-Only` generales para dashboards de monitoreo centralizado.
-- **Cifrado SHA-256**: Todas las llaves se hashean en el backend y solo se muestran una vez al usuario.
+> **Stack**: Ionic 8 + Vue 3 (Composition API) + Pinia + Axios  
+> **Backend**: FastAPI DDD-Lite (comunicación exclusiva por API REST + SSE)  
+> **Versión**: 2.0 — Abril 2026  
 
 ---
 
-## 🎨 Filosofía UI/UX: "AgTech Premium"
+## 📐 Arquitectura General
 
-El frontend utiliza un sistema de diseño propio basado en **Ionic + Vue 3** con un enfoque en la legibilidad y la estética de alta tecnología:
+El frontend opera como una **SPA (Single Page Application)** desacoplada del backend. Toda la comunicación se realiza a través de un cliente Axios centralizado. No se utiliza el SDK de Supabase en la capa de presentación.
 
-- **Diseño Glassmorphism**: Uso de capas translúcidas, desenfoques y bordes neón sutiles.
-- **Navegación Dinámica**: Sidebar retráctil que se convierte en panel lateral en móviles, optimizando el espacio de visualización de datos.
-- **Reactividad de Sesión**: Redirección automática al `/login` y limpieza de estado en caso de expiración de sesión (401 Unauthorized).
+```mermaid
+graph TB
+    subgraph Frontend["🖥️ Frontend (Ionic + Vue 3)"]
+        direction TB
+        Router["Router Guard<br/>(Auth Check)"]
+        Views["Views<br/>(Pages)"]
+        Components["Components<br/>(UI Reutilizable)"]
+        Composables["Composables<br/>(Lógica de Negocio)"]
+        Stores["Pinia Stores<br/>(Estado Global)"]
+        Services["API Service<br/>(Axios Singleton)"]
+    end
 
----
+    subgraph Backend["⚙️ Backend (FastAPI)"]
+        direction TB
+        AuthAPI["POST /auth/login<br/>POST /auth/register"]
+        DashAPI["GET /dashboard/latest<br/>GET /dashboard/history"]
+        ChatAPI["POST /chat<br/>GET /chat/history"]
+        IoTAPI["POST /iot/telemetry<br/>GET /iot/stream (SSE)"]
+        ZonesAPI["CRUD /zones/"]
+    end
 
-## 🛠️ Stack Tecnológico
+    subgraph DB["🗄️ Supabase (PostgreSQL)"]
+        SensorData["sensor_data"]
+        Zones["zones"]
+        ActuatorLog["actuator_log"]
+        ChatHistory["chat_history"]
+    end
 
-- **Core Framework:** [Vue 3](https://vuejs.org/) (Composition API).
-- **UI Framework:** [Ionic Vue](https://ionicframework.com/docs/vue/overview) (Mobile-ready).
-- **Backend Communication:** Axios (DDD-Lite Architecture).
-- **Gestión de Estado:** [Pinia](https://pinia.vuejs.org/) (Persistencia asíncrona).
-- **Visualización:** Chart.js + CSS Custom Properties para temas dinámicos.
-
----
-
-## 🏗️ Estructura del Proyecto
-
-```text
-src/
-├── components/   # UI components (ZoneManager, ApiSecurityPanel, TelemetryCard)
-├── composables/  # Lógica reutilizable (useTelemetry, useActuatorBus)
-├── services/     # Clientes de API (Axios singleton, Interceptores de Auth)
-├── stores/       # Estado global (Auth, IoT, Telemetría, Chat)
-├── theme/        # AG-Design Tokens y variables CSS
-└── views/        # Dashboards, Control de Sistema, IA Assistant
+    Router --> Views
+    Views --> Components
+    Views --> Composables
+    Composables --> Stores
+    Stores --> Services
+    Services -->|HTTP/SSE| AuthAPI
+    Services -->|HTTP| DashAPI
+    Services -->|HTTP| ChatAPI
+    Services -->|HTTP/SSE| IoTAPI
+    Services -->|HTTP| ZonesAPI
+    AuthAPI --> DB
+    DashAPI --> DB
+    ChatAPI --> DB
+    IoTAPI --> DB
+    ZonesAPI --> DB
 ```
 
 ---
 
-## 🚀 Instalación y Configuración
+## 🗺️ Mapa de Navegación y Rutas
 
-1. **Instalar Dependencias:**
-   ```bash
-   npm install
-   ```
-2. **Configurar Entorno (`.env`):**
-   ```env
-   # URL base de la API FastAPI (DDD-Lite)
-   VITE_API_BASE_URL="http://127.0.0.1:8000/api"
-   
-   # Opcional: URL de Supabase para Auth directo (Legacy support)
-   VITE_SUPABASE_URL="tu-url"
-   VITE_SUPABASE_ANON_KEY="tu-key"
-   ```
-3. **Arrancar modo desarrollo:**
-   ```bash
-   npm run dev
-   ```
+```mermaid
+graph LR
+    Root["/"] -->|redirect| Home
+    Login["/login"] -->|on success| Home
+    Register["/register"] -->|on success| Home
+
+    subgraph Authenticated["/tabs/ (requiresAuth)"]
+        Home["/tabs/home<br/>WelcomeHome"]
+        Dashboard["/tabs/dashboard<br/>TelemetryDashboard"]
+        Chat["/tabs/assistant<br/>TabChat"]
+        System["/tabs/control<br/>TabSystem"]
+    end
+
+    Home --- Dashboard
+    Home --- Chat
+    Home --- System
+```
+
+| Ruta | Vista | Descripción | Guard |
+|------|-------|-------------|-------|
+| `/login` | `LoginPage.vue` | Formulario de autenticación con JWT | Público |
+| `/register` | `RegisterPage.vue` | Registro de nuevos usuarios | Público |
+| `/tabs/home` | `WelcomeHome.vue` | Landing con métricas de resumen y accesos rápidos | Auth |
+| `/tabs/dashboard` | `TelemetryDashboard.vue` | Gráficos en tiempo real con filtro por zona | Auth |
+| `/tabs/assistant` | `TabChat.vue` | Asistente IA multi-sesión con markdown | Auth |
+| `/tabs/control` | `TabSystem.vue` | Gestión de hardware, zonas y seguridad | Auth |
+
+> **Router Guard**: Un `beforeEach` global verifica `authStore.isAuthenticated`. Si el token expira (401 del backend), el interceptor de Axios limpia el estado y redirige a `/login` automáticamente.
 
 ---
 
-## 💡 Flujo de Trabajo con Zonas y Hardware
+## 🧩 Árbol de Componentes
 
-1. **Crear Zona**: Ve a `Control de Sistema` -> `Infrastructure Manager` y añade tu primera zona.
-2. **Generar Key**: Selecciona la zona en el selector superior y genera una `Write Key`.
-3. **Hardware Config**: Configura tu ESP32 con la llave generada y el endpoint de telemetría.
-4. **Validación**: El backend rechazará cualquier telemetría que no coincida con el `zone_id` de la llave.
+```mermaid
+graph TD
+    App["App.vue"]
+    App --> TabsPage["TabsPage.vue<br/>(Sidebar + RouterOutlet)"]
+    
+    TabsPage --> WH["WelcomeHome"]
+    TabsPage --> TD["TelemetryDashboard"]
+    TabsPage --> TC["TabChat"]
+    TabsPage --> TS["TabSystem"]
+
+    TD --> TC1["TelemetryCard x5"]
+    TD --> TRC["TrendsChart x4"]
+    TD --> SK["SkeletonCard"]
+    TD --> SEG["SegmentedControl"]
+
+    TS --> MTC["ModeToggleCard"]
+    TS --> EC["EnvironmentControls"]
+    TS --> ASP["ApiSecurityPanel"]
+    TS --> AL["ActivityLog"]
+    TS --> PS["ProfileSettings"]
+    TS --> ZM["ZoneManager (Modal)"]
+
+    ASP --> AKM["ApiKeyModal"]
+```
+
+### Componentes Detallados
+
+| Componente | Ubicación | Responsabilidad |
+|------------|-----------|-----------------|
+| `TelemetryCard` | `components/` | Tarjeta individual de métrica con barra de progreso y unidad |
+| `TrendsChart` | `components/` | Gráfico Chart.js con datos históricos y gradiente |
+| `SkeletonCard` | `components/` | Placeholder animado durante la carga inicial |
+| `SegmentedControl` | `components/` | Selector de rango temporal (1h / 5h / 24h) |
+| `ApiKeyModal` | `components/` | Modal que muestra la API Key generada (una sola vez) |
+| `ModeToggleCard` | `components/system/` | Switch AUTO / MANUAL con persistencia en DB |
+| `EnvironmentControls` | `components/system/` | Controles manuales de actuadores (Bomba, Fan, Luz) |
+| `ApiSecurityPanel` | `components/system/` | Provisionamiento de API Keys con validación por zona |
+| `ActivityLog` | `components/system/` | Historial paginado de acciones de actuadores |
+| `ProfileSettings` | `components/system/` | Edición de nombre y rol del usuario |
+| `ZoneManager` | `components/system/` | CRUD modal para gestionar invernaderos/zonas |
+
+---
+
+## 🏪 Flujo de Datos (Stores)
+
+```mermaid
+flowchart LR
+    subgraph Stores
+        AUTH["authStore<br/>──────<br/>accessToken<br/>user<br/>isAuthenticated"]
+        TEL["telemetryStore<br/>──────<br/>latest<br/>history<br/>loading"]
+        IOT["iotStore<br/>──────<br/>zones[]<br/>selectedZoneId<br/>actuatorLogs[]"]
+        SYS["systemStore<br/>──────<br/>mode<br/>loading"]
+        CONV["conversationsStore<br/>──────<br/>conversations[]<br/>activeId<br/>messages[]"]
+    end
+
+    subgraph Services["api.ts (Axios)"]
+        DS["dashboardService"]
+        CS["chatService"]
+        IS["iotService"]
+        SS["systemService"]
+    end
+
+    AUTH -->|JWT Token| Services
+    TEL -->|fetchLatest/fetchHistory| DS
+    IOT -->|getZones/createZone| IS
+    SYS -->|getState/updateMode| DS
+    CONV -->|sendMessage/getHistory| CS
+```
+
+### Detalle de cada Store
+
+#### `authStore` — Autenticación
+| Propiedad / Acción | Tipo | Descripción |
+|---------------------|------|-------------|
+| `accessToken` | `string \| null` | JWT almacenado en `localStorage` |
+| `user` | `object \| null` | Metadata del usuario (email, id, rol) |
+| `isAuthenticated` | `computed<boolean>` | Derivado de `!!accessToken` |
+| `signIn(credentials)` | `async` | Login via `POST /auth/login` |
+| `signUp(credentials)` | `async` | Registro via `POST /auth/register` |
+| `signOut()` | `sync` | Limpia token + user + localStorage |
+
+#### `telemetryStore` — Datos de Sensores
+| Propiedad / Acción | Tipo | Descripción |
+|---------------------|------|-------------|
+| `latest` | `TelemetryData \| null` | Última lectura (temp, hum, pH, ec, light) |
+| `history` | `TelemetryData[]` | Historial ordenado cronológicamente para gráficos |
+| `fetchLatest(zoneId?)` | `async` | Obtiene última lectura (filtrada por zona opcionalmente) |
+| `fetchHistory(zoneId?)` | `async` | Obtiene historial completo con mapeo de campos |
+| `updateLatest(data)` | `sync` | Inyecta datos en tiempo real desde SSE |
+
+#### `iotStore` — Infraestructura y Zonas
+| Propiedad / Acción | Tipo | Descripción |
+|---------------------|------|-------------|
+| `zones` | `Zone[]` | Lista de invernaderos/zonas del usuario |
+| `selectedZoneId` | `string \| null` | Zona activa para filtrar telemetría y logs |
+| `actuatorLogs` | `ActuatorLogEntry[]` | Historial paginado de acciones |
+| `createZone(name, crop)` | `async` | `POST /zones/` — Añade zona y actualiza lista |
+| `updateZone(id, name, crop)` | `async` | `PATCH /zones/{id}/` — Edita zona existente |
+| `deleteZone(id)` | `async` | `DELETE /zones/{id}/` — Elimina zona |
+| `fetchActuatorLogs(reset?)` | `async` | Paginación infinita con `logPage` y `logHasMore` |
+
+#### `conversationsStore` — Chat IA Multi-Sesión
+| Propiedad / Acción | Tipo | Descripción |
+|---------------------|------|-------------|
+| `conversations` | `Conversation[]` | Sesiones de chat ordenadas por `updated_at` |
+| `activeConversationId` | `string \| null` | Sesión activa actualmente |
+| `messages` | `ChatMessage[]` | Mensajes de la conversación activa |
+| `sendMessage(text)` | `async` | Envía mensaje, procesa `actions[]` y `alerts[]` |
+
+---
+
+## 🔌 Capa de Servicios (`api.ts`)
+
+### Configuración del Cliente
+
+```typescript
+// La URL base SIEMPRE termina en "/" para evitar errores de concatenación
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const finalBaseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl : `${rawBaseUrl}/`;
+const api = axios.create({ baseURL: finalBaseUrl });
+```
+
+### Interceptores
+
+```mermaid
+sequenceDiagram
+    participant Component
+    participant Axios
+    participant Backend
+
+    Component->>Axios: api.get("dashboard/latest")
+    
+    Note over Axios: Request Interceptor<br/>Inyecta Bearer token<br/>desde localStorage
+
+    Axios->>Backend: GET /api/dashboard/latest<br/>Authorization: Bearer xxx
+
+    alt 200 OK
+        Backend-->>Axios: { temperature: 24.5, ... }
+        Axios-->>Component: response.data
+    else 401 Unauthorized
+        Backend-->>Axios: 401
+        Note over Axios: Response Interceptor<br/>1. Llama authStore.signOut()<br/>2. Toast "Session expired"<br/>3. router.push("/login")
+    else 429 Too Many Requests
+        Backend-->>Axios: 429
+        Note over Axios: Response Interceptor<br/>Toast "AI resting"
+    end
+```
+
+### Endpoints Disponibles
+
+| Servicio | Método | Endpoint | Zona-Aware |
+|----------|--------|----------|:----------:|
+| `dashboardService.getLatest` | `GET` | `dashboard/latest` | ✅ |
+| `dashboardService.getHistory` | `GET` | `dashboard/history` | ✅ |
+| `dashboardService.getState` | `GET` | `dashboard/state` | ❌ |
+| `dashboardService.updateMode` | `POST` | `dashboard/mode` | ❌ |
+| `chatService.sendMessage` | `POST` | `chat` | ❌ |
+| `chatService.getHistory` | `GET` | `chat/history` | ❌ |
+| `iotService.getZones` | `GET` | `zones/` | — |
+| `iotService.createZone` | `POST` | `zones/` | — |
+| `iotService.updateZone` | `PATCH` | `zones/{id}/` | — |
+| `iotService.deleteZone` | `DELETE` | `zones/{id}/` | — |
+| `iotService.getActuatorLog` | `GET` | `dashboard/actuator-log` | ✅ |
+| `systemService.generateApiKey` | `POST` | `auth/keys` | ✅ |
+
+---
+
+## 🔐 Modelo de Seguridad por Zonas
+
+```mermaid
+graph TD
+    subgraph Frontend
+        Selector["Zone Selector<br/>(All / Specific)"]
+        ReadBtn["Generate READ Key"]
+        WriteBtn["Generate WRITE Key"]
+    end
+
+    subgraph Backend
+        Validate["POST /auth/keys"]
+        DB["api_keys table"]
+    end
+
+    Selector -->|zone_id = null| ReadBtn
+    Selector -->|zone_id = uuid| ReadBtn
+    Selector -->|zone_id = uuid| WriteBtn
+    Selector -.->|zone_id = null| WriteBtn
+
+    ReadBtn -->|"{ key_type: read, zone_id: null }"| Validate
+    WriteBtn -->|"{ key_type: write, zone_id: uuid }"| Validate
+
+    Validate -->|"✅ Read global allowed"| DB
+    Validate -->|"✅ Write + zone OK"| DB
+    Validate -->|"❌ 400: Write sin zona"| WriteBtn
+
+    style WriteBtn stroke:#f97316,stroke-width:2px
+    style ReadBtn stroke:#3b82f6,stroke-width:2px
+```
+
+| Tipo de Llave | Scope Permitido | Uso en Hardware |
+|:---:|:---:|---|
+| `READ` | Global o por Zona | Dashboards de monitoreo, pantallas de lectura |
+| `WRITE` | Solo por Zona | ESP32/Arduino con actuadores (bomba, ventilador, luz) |
+
+---
+
+## 🔄 Flujo de Telemetría en Tiempo Real (SSE)
+
+```mermaid
+sequenceDiagram
+    participant ESP32
+    participant Backend
+    participant SSEBus["SSE Bus (Memory)"]
+    participant Frontend
+
+    ESP32->>Backend: POST /iot/telemetry<br/>X-API-Key: agnx_w_xxx<br/>{ sensor_data, zone_id }
+
+    Note over Backend: 1. Valida Write Key<br/>2. Verifica zone_id vs key scope<br/>3. Inserta en sensor_data<br/>4. Ejecuta AI Orchestrator
+
+    Backend->>SSEBus: broadcast({ user_id, zone_id, data })
+    Backend-->>ESP32: { actions: [...], alerts: [...] }
+
+    Frontend->>Backend: GET /iot/stream?token=jwt
+    Note over Frontend: useTelemetrySSE()<br/>EventSource con auto-reconnect
+
+    SSEBus-->>Frontend: data: { temperature: 26.3, ... }
+    Note over Frontend: telemetryStore.updateLatest(data)<br/>Dashboard se actualiza reactivamente
+```
+
+---
+
+## 📂 Estructura de Directorios Detallada
+
+```text
+src/
+├── components/                     # Componentes UI reutilizables
+│   ├── ApiKeyModal.vue             #   Modal de visualización de API Key generada
+│   ├── SegmentedControl.vue        #   Selector tipo pill (1h / 5h / 24h)
+│   ├── SkeletonCard.vue            #   Placeholder animado de carga
+│   ├── TelemetryCard.vue           #   Tarjeta de métrica con progreso visual
+│   ├── TrendsChart.vue             #   Gráfico Chart.js con gradiente
+│   └── system/                     #   Sub-módulo de control del sistema
+│       ├── ActivityLog.vue         #     Historial paginado de actuadores
+│       ├── ApiSecurityPanel.vue    #     Panel de generación de API Keys
+│       ├── EnvironmentControls.vue #     Controles manuales (Bomba/Fan/Luz)
+│       ├── ModeToggleCard.vue      #     Switch AUTO ↔ MANUAL
+│       ├── ProfileSettings.vue     #     Edición de perfil de usuario
+│       └── ZoneManager.vue         #     CRUD modal de zonas/invernaderos
+│
+├── composables/                    # Lógica de negocio extraída
+│   ├── useActuatorBus.ts           #   Bus reactivo global para acciones de la IA
+│   ├── useSystemControls.ts        #   Lógica de modo, actuadores y generación de keys
+│   ├── useTelemetry.ts             #   Wrapper reactivo sobre telemetryStore
+│   └── useTelemetrySSE.ts          #   Conexión SSE con auto-reconnect (5s)
+│
+├── router/
+│   └── index.ts                    # Definición de rutas + beforeEach guard
+│
+├── services/
+│   └── api.ts                      # Axios singleton + interceptores + todos los servicios
+│
+├── stores/                         # Estado global (Pinia Composition API)
+│   ├── auth.ts                     #   JWT, login, logout, profile
+│   ├── conversationsStore.ts       #   Sesiones de chat + mensajes + envío
+│   ├── iotStore.ts                 #   Zonas, logs de actuadores, selección
+│   ├── system.ts                   #   Modo del sistema (AUTO/MANUAL)
+│   └── telemetry.ts                #   Datos de sensores (latest + history)
+│
+├── theme/
+│   └── variables.css               # AG-Design Tokens (colores, radii, spacing)
+│
+├── types/
+│   └── index.ts                    # Interfaces TypeScript del dominio completo
+│
+└── views/                          # Páginas enrutables (Smart Components)
+    ├── LoginPage.vue               #   Formulario de login premium
+    ├── RegisterPage.vue            #   Formulario de registro
+    ├── TabChat.vue                 #   Asistente IA con multi-sesión y markdown
+    ├── TabSystem.vue               #   Panel de control del sistema
+    ├── TabsPage.vue                #   Layout principal (Sidebar + RouterOutlet + SSE)
+    ├── TelemetryDashboard.vue      #   Dashboard con gráficos y filtro por zona
+    └── WelcomeHome.vue             #   Landing con resumen de métricas
+```
+
+---
+
+## ⚙️ Variables de Entorno
+
+| Variable | Valor por defecto | Descripción |
+|----------|-------------------|-------------|
+| `VITE_API_BASE_URL` | `http://localhost:8000/api` | URL base de la API FastAPI. **Debe incluir `/api`** |
+| `VITE_SUPABASE_URL` | — | (Legacy) URL del proyecto Supabase |
+| `VITE_SUPABASE_ANON_KEY` | — | (Legacy) Clave anónima de Supabase |
+
+---
+
+## 🚀 Comandos
+
+| Comando | Descripción |
+|---------|-------------|
+| `npm run dev` | Servidor de desarrollo Vite (HMR) |
+| `npm run build` | `vue-tsc` + bundle de producción en `/dist` |
+| `npm run preview` | Preview del bundle de producción |
+| `npm run lint` | Linting con ESLint |
+| `npm run test:unit` | Tests unitarios con Vitest |
+| `npm run test:e2e` | Tests E2E con Cypress |
+| `npx cap sync` | Sincroniza código web con Capacitor (iOS/Android) |
+
+---
+
+## 📦 Dependencias Principales
+
+| Paquete | Versión | Propósito |
+|---------|---------|-----------|
+| `vue` | ^3.3.0 | Framework reactivo core |
+| `@ionic/vue` | ^8.0.0 | Componentes nativos mobile-ready |
+| `pinia` | ^3.0.4 | Estado global con Composition API |
+| `axios` | ^1.14.0 | Cliente HTTP (único punto de comunicación) |
+| `chart.js` + `vue-chartjs` | ^4.5 / ^5.3 | Gráficos de tendencias históricas |
+| `marked` + `dompurify` | ^17 / ^3.3 | Renderizado seguro de markdown en el chat |
+| `ionicons` | ^7.0.0 | Iconografía del sistema |
+| `@capacitor/core` | 8.3.0 | Bridge nativo para iOS/Android |
 
 ---
 
 > [!IMPORTANT]
-> Este proyecto ha migrado de un modelo directo de base de datos a un modelo gobernado por API (FastAPI). No utilices el SDK de Supabase directamente en los componentes; usa siempre los servicios en `src/services/api.ts`.
+> **Regla de Oro**: Nunca importes `supabase` directamente en componentes o stores. Toda comunicación con el backend debe pasar por `src/services/api.ts`. El SDK de Supabase solo se mantiene como dependencia legacy para compatibilidad con Capacitor Auth.
