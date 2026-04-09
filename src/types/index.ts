@@ -23,6 +23,7 @@ export interface Zone {
   id: string;
   name: string;
   description?: string;
+  crop_type?: string;
 }
 
 export interface ActuatorLogEntry {

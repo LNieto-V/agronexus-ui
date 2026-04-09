@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { 
-  IonItem, IonLabel, IonInput, IonButton, 
+  IonItem, IonInput, IonButton, 
   IonIcon, IonList, IonItemSliding, IonItemOptions, 
   IonItemOption, modalController, toastController, IonSpinner
 } from '@ionic/vue';

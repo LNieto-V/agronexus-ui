@@ -377,6 +377,30 @@ src/
 
 ---
 
+## 🧪 Estrategia de Testing
+
+El frontend cuenta con una suite completa de pruebas automatizadas que garantizan la estabilidad de los flujos críticos. Se han implementado **19 tests** verificados que cubren lógica de negocio, UI y flujos de usuario.
+
+### 1. Niveles de Prueba
+
+| Nivel | Herramienta | Alcance | Ubicación |
+|-------|------------|---------|-----------|
+| **Unit Testing** | `vitest` | Lógica de Stores (Pinia), servicios y utilidades | `tests/unit/*.spec.ts` |
+| **Component Testing**| `vue-test-utils` | Renderizado reactivo, props y eventos de UI | `tests/unit/components/` |
+| **E2E Testing** | `cypress` | Flujos completos (Login -> Dashboard -> Gestión) | `tests/e2e/specs/` |
+
+### 2. Cobertura Crítica
+- **Auth**: Validación de persistencia de JWT, logout reactivo y protección de rutas.
+- **Telemetría**: Mapeo correcto de datos de sensores y balanceo de carga en gráficos.
+- **IoT/Zonas**: Ciclo de vida completo de infraestructura y paginación infinita de logs técnicos.
+
+### 3. Entorno y Mocks
+- **Mocks Globales**: Ubicados en `tests/unit/setup.ts`. Mockean `axios`, `localStorage` y controladores de Ionic.
+- **Aislamiento**: Los tests unitarios no dependen de una API real; utilizan `vi.spyOn` y `vi.mocked` para simular respuestas de red.
+- **Configuración Vite**: Soporte para ESM en Ionic Core inyectado vía `server.deps.inline` en `vite.config.ts`.
+
+---
+
 ## ⚙️ Variables de Entorno
 
 | Variable | Valor por defecto | Descripción |

@@ -28,7 +28,7 @@ export const useTelemetryStore = defineStore('telemetry', () => {
         ph: (raw.ph ?? raw.p) as number,
         ec: (raw.ec ?? raw.e) as number,
         light: (raw.light ?? raw.lux ?? raw.l) as number,
-        timestamp: response.data.timestamp || raw.created_at || new Date().toISOString()
+        timestamp: (response.data.timestamp || raw.created_at || new Date().toISOString()) as string
       };
     } catch (err: unknown) {
       error.value = err instanceof Error ? err.message : 'Error fetching latest data';
