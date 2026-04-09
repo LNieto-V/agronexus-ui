@@ -1,77 +1,68 @@
-# 🌾 AgroNexus AI - Frontend Dashboard
+# 🌾 AgroNexus AI - Frontend AgTech Dashboard
 
-AgroNexus AI es una plataforma **SaaS tipo AgTech (Tecnología Agrícola)** premium y moderna. Su objetivo principal es ofrecer a granjeros e ingenieros agrícolas un control visual e interactivo de la telemetría, el estado del sistema y acceso a un Asistente Bot potenciado por Inteligencia Artificial, todo desde una interfaz unificada, fluida e intuitiva con un marcado diseño *glassmorphism*.
+AgroNexus AI es una plataforma **SaaS tipo AgTech (Tecnología Agrícola)** premium y moderna diseñada para el control total de infraestructuras de cultivo inteligente. Basada en una arquitectura de microservicios y diseño *glassmorphism*, ofrece una experiencia fluida tanto en web como en dispositivos móviles.
 
 ---
 
 ## 🚀 Características Principales
 
-### 🔴 Dashboard en Tiempo Real
-- Visualización de métricas críticas: **Temperatura, pH, EC (Electroconductividad)** y humedad.
-- Sistema de salud centralizado con indicadores de estado de los nodos.
+### 🌿 Gestión de Infraestructura por Zonas (NUEVO)
+- **Control Granular**: Organiza tu invernadero por zonas (ej: Invernadero Beta, Zona Hidropónica 1).
+- **CRUD Completo**: Crea, edita y elimina zonas de cultivo directamente desde el Dashboard.
+- **Filtrado Inteligente**: Visualiza telemetría y logs de actuadores de forma global o filtrada por una zona específica.
 
-### 🤖 Asistente de IA Multi-Sesión
-- **Gestión de Sesiones**: Crea, renombra y elimina múltiples conversaciones con persistencia en Supabase.
-- **Interfaz Modal Responsiva**: Historial de chats accesible mediante un modal tipo "Sheet" moderno, eliminando el desorden de barras laterales secundarias.
-- **Markdown Premium**: Soporte completo para renderizado de tablas, bloques de código y formato enriquecido con `marked` y `dompurify`.
+### 🔴 Dashboard con Telemetría en Tiempo Real
+- **Métricas Críticas**: Monitoreo de Temperatura, Humedad, pH, EC (Electroconductividad) e Intensidad Lumínica.
+- **Gráficos de Tendencias**: Visualización histórica mediante Chart.js para análisis de ciclos de cultivo.
+- **Integración SSE**: Telemetría en tiempo real mediante *Server-Sent Events* para una latencia mínima.
 
-### 🛡️ Seguridad y Hardware
-- **Autenticación IoT**: Generación y gestión de API Keys (Read/Write) para microcontroladores (ESP32/Arduino).
-- **Control de Modos**: Alterna entre modos *Eco*, *Intervencionista* y *Automático* con sincronización global.
+### 🤖 Asistente de IA (Brain Orchestrator)
+- **Gestión de Sesiones**: Sistema multi-sesión para consultas técnicas agrícolas.
+- **Control de Actuadores**: La IA puede sugerir o ejecutar comandos basados en anomalías detectadas.
+- **Markdown Premium**: Soporte completo para tablas técnicas, alertas y bloques de código.
+
+### 🛡️ Seguridad y Provisionamiento de Hardware
+- **Modelos de Seguridad Per-Zona**: Las API Keys de escritura (`Write`) están estrictamente vinculadas a una zona para evitar riesgos de seguridad global.
+- **Llaves de Lectura Global**: Posibilidad de generar llaves `Read-Only` generales para dashboards de monitoreo centralizado.
+- **Cifrado SHA-256**: Todas las llaves se hashean en el backend y solo se muestran una vez al usuario.
 
 ---
 
 ## 🎨 Filosofía UI/UX: "AgTech Premium"
 
-El frontend ha sido recientemente optimizado para una interacción más profesional y enfocada:
+El frontend utiliza un sistema de diseño propio basado en **Ionic + Vue 3** con un enfoque en la legibilidad y la estética de alta tecnología:
 
-> [!TIP]
-> **Navegación Simplificada**: Hemos eliminado la navegación inferior (tabs) y los menús dobles para centralizar todo en una **Sidebar Única**. En dispositivos móviles, esta barra se convierte en un panel lateral oculto dejando el 100% de la pantalla para el contenido.
-
-- **Diseño Glassmorphism**: Uso extensivo de desenfoques, bordes sutiles y gradientes para una sensación de alta tecnología.
-- **Single Source of Truth**: Acceso global al botón de "Cerrar Sesión" desde el sidebar y encabezados optimizados para respetar el *safe area* de los dispositivos móviles.
+- **Diseño Glassmorphism**: Uso de capas translúcidas, desenfoques y bordes neón sutiles.
+- **Navegación Dinámica**: Sidebar retráctil que se convierte en panel lateral en móviles, optimizando el espacio de visualización de datos.
+- **Reactividad de Sesión**: Redirección automática al `/login` y limpieza de estado en caso de expiración de sesión (401 Unauthorized).
 
 ---
 
-## 🛠️ Stack Tecnológico Core
+## 🛠️ Stack Tecnológico
 
-- **Framework Web:** [Vue 3](https://vuejs.org/) (Composition API: `<script setup>`).
-- **Framework UI / Mobile:** [Ionic Vue](https://ionicframework.com/docs/vue/overview).
-- **Backend as a Service:** [Supabase](https://supabase.com/) (Auth, Real-time DB, Edge Functions).
-- **Gestión de Estado:** [Pinia](https://pinia.vuejs.org/).
-- **Visualización de Datos:** Chart.js.
-- **Renderizado Markdown:** `marked` y `dompurify`.
-
----
-
-## 🏗️ Arquitectura del Sistema
-
-El frontend opera bajo un modelo **SPA (Single Page Application) State-Driven** estructurado en capas desacopladas:
-
-### Capas y Patrones
-1. **Capa de Servicios (`@/services`):** Aísla la lógica de red (Supabase/API). Facilita la migración de backend sin tocar la UI.
-2. **Capa de Estado (`@/stores`):** Fuente única de verdad usando Pinia. Implementa persistencia automática y reactividad global.
-3. **Composables Logic (`@/composables`):** Organiza la lógica de negocio reutilizable (Auth, System Controls, Telemetry Sync).
-4. **Presentación Inteligente:** Distinción clara entre *Smart Components* (Views en `@/views`) y *Dumb Components* (UI reutilizable en `@/components`).
+- **Core Framework:** [Vue 3](https://vuejs.org/) (Composition API).
+- **UI Framework:** [Ionic Vue](https://ionicframework.com/docs/vue/overview) (Mobile-ready).
+- **Backend Communication:** Axios (DDD-Lite Architecture).
+- **Gestión de Estado:** [Pinia](https://pinia.vuejs.org/) (Persistencia asíncrona).
+- **Visualización:** Chart.js + CSS Custom Properties para temas dinámicos.
 
 ---
 
-## 📂 Organización de Directorios
+## 🏗️ Estructura del Proyecto
 
 ```text
 src/
-├── components/   # UI components reutilizables (Botones, Logs, Gráficos)
-├── composables/  # Lógica extraída de las vistas (Estado de forms, watchers)
-├── lib/          # Configuración de Supabase y utilidades puras
-├── services/     # Llamadas a la API del Backend, LLM y Persistence Layer
-├── stores/       # Estado global (Pinia). Autenticación, chat de la IA, Telemetría
-├── theme/        # Sistema de diseño: variables CSS, AG-Design tokens
-└── views/        # Páginas enrutables (Dashboard, Control, Chat, Home)
+├── components/   # UI components (ZoneManager, ApiSecurityPanel, TelemetryCard)
+├── composables/  # Lógica reutilizable (useTelemetry, useActuatorBus)
+├── services/     # Clientes de API (Axios singleton, Interceptores de Auth)
+├── stores/       # Estado global (Auth, IoT, Telemetría, Chat)
+├── theme/        # AG-Design Tokens y variables CSS
+└── views/        # Dashboards, Control de Sistema, IA Assistant
 ```
 
 ---
 
-## 🚀 Instalación y Despliegue Local
+## 🚀 Instalación y Configuración
 
 1. **Instalar Dependencias:**
    ```bash
@@ -79,22 +70,28 @@ src/
    ```
 2. **Configurar Entorno (`.env`):**
    ```env
+   # URL base de la API FastAPI (DDD-Lite)
+   VITE_API_BASE_URL="http://127.0.0.1:8000/api"
+   
+   # Opcional: URL de Supabase para Auth directo (Legacy support)
    VITE_SUPABASE_URL="tu-url"
-   VITE_SUPABASE_ANON_KEY="tu-anon-key"
+   VITE_SUPABASE_ANON_KEY="tu-key"
    ```
-3. **Arrancar Desarrollo:**
+3. **Arrancar modo desarrollo:**
    ```bash
    npm run dev
    ```
 
 ---
 
-## 💡 Comandos Útiles
-- `npm run build`: Genera el bundle de producción en `/dist`.
-- `npx vue-tsc --noEmit`: Verificación estricta de tipos.
-- `npx cap sync`: Sincroniza el código web con plataformas móviles nativas.
+## 💡 Flujo de Trabajo con Zonas y Hardware
+
+1. **Crear Zona**: Ve a `Control de Sistema` -> `Infrastructure Manager` y añade tu primera zona.
+2. **Generar Key**: Selecciona la zona en el selector superior y genera una `Write Key`.
+3. **Hardware Config**: Configura tu ESP32 con la llave generada y el endpoint de telemetría.
+4. **Validación**: El backend rechazará cualquier telemetría que no coincida con el `zone_id` de la llave.
 
 ---
 
 > [!IMPORTANT]
-> Este proyecto sigue estándares de codificación estrictos de TypeScript y utiliza un sistema de **Design Tokens** personalizado definido en `/src/theme/variables.css`.
+> Este proyecto ha migrado de un modelo directo de base de datos a un modelo gobernado por API (FastAPI). No utilices el SDK de Supabase directamente en los componentes; usa siempre los servicios en `src/services/api.ts`.
