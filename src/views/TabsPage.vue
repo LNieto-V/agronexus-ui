@@ -13,15 +13,18 @@ import {
 import { onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { useIotStore } from '@/stores/iotStore';
 import { useTelemetrySSE } from '@/composables/useTelemetrySSE';
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const iotStore = useIotStore();
 const { connect: connectSSE } = useTelemetrySSE();
 
 onMounted(() => {
   connectSSE();
+  iotStore.fetchZones();
 });
 
 async function handleLogout() {

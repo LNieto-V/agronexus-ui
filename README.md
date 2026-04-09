@@ -2,7 +2,7 @@
 
 > **Stack**: Ionic 8 + Vue 3 (Composition API) + Pinia + Axios  
 > **Backend**: FastAPI DDD-Lite (comunicación exclusiva por API REST + SSE)  
-> **Versión**: 2.0 — Abril 2026  
+> **Versión**: 2.5.0 — Abril 2026  
 
 ---
 
@@ -294,6 +294,16 @@ graph TD
 |:---:|:---:|---|
 | `READ` | Global o por Zona | Dashboards de monitoreo, pantallas de lectura |
 | `WRITE` | Solo por Zona | ESP32/Arduino con actuadores (bomba, ventilador, luz) |
+
+---
+
+## 🛠️ Diagnóstico y Salud del Sistema
+
+La vista `TabSystem.vue` incluye un módulo de diagnóstico avanzado para operarios y desarrolladores:
+
+- **Health Check**: Verifica la conectividad de todos los nodos de la red IoT y el estado del orquestador AI.
+- **Test Telemetry**: Permite inyectar datos sintéticos para validar el comportamiento reactivo de los actuadores y las alertas de la IA sin necesidad de hardware físico.
+- **Heartbeat Monitor**: Indicador visual en tiempo real de la sincronización del sistema (Online/Offline).
 
 ---
 

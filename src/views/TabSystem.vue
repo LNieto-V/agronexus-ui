@@ -42,6 +42,7 @@ const iotStore = useIotStore();
 
 onMounted(() => {
   checkSystem();
+  iotStore.fetchZones();
   iotStore.fetchActuatorLogs(true);
 });
 

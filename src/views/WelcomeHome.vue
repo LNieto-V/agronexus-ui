@@ -9,16 +9,19 @@ import {
   timeOutline, arrowForwardOutline
 } from 'ionicons/icons';
 import { computed, onMounted } from 'vue';
+import { useIotStore } from '@/stores/iotStore';
 import { useAuthStore } from '@/stores/auth';
 import { useTelemetryStore } from '@/stores/telemetry';
 import { useRouter } from 'vue-router';
 
 const authStore = useAuthStore();
 const telemetryStore = useTelemetryStore();
+const iotStore = useIotStore();
 const router = useRouter();
 
 onMounted(() => {
   telemetryStore.fetchLatest();
+  iotStore.fetchZones();
 });
 
 const lastSyncLabel = computed(() => {
