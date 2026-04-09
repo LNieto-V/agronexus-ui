@@ -7,8 +7,9 @@ import {
 } from '@ionic/vue';
 import { 
   addOutline, trashOutline, createOutline, 
-  closeOutline, leafOutline, businessOutline 
+  closeOutline, leafOutline, businessOutline, copyOutline 
 } from 'ionicons/icons';
+import { Clipboard } from '@capacitor/clipboard';
 import { useIotStore } from '@/stores/iotStore';
 import type { Zone } from '@/types';
 
@@ -74,6 +75,11 @@ async function showToast(message: string, color = 'success') {
   await toast.present();
 }
 
+async function copyId(id: string) {
+  await Clipboard.write({ string: id });
+  showToast('UUID copied to clipboard');
+}
+
 function dismiss() {
   modalController.dismiss();
 }
@@ -113,6 +119,10 @@ function dismiss() {
               <div class="zone-info">
                 <span class="zone-name">{{ zone.name }}</span>
                 <span class="zone-crop">{{ zone.crop_type || 'No crop set' }}</span>
+                <div class="zone-uuid-container" @click="copyId(zone.id)">
+                  <span class="zone-uuid text-xs">ID: {{ zone.id }}</span>
+                  <ion-icon :icon="copyOutline" class="copy-small-icon" />
+                </div>
               </div>
               <div slot="end" class="item-actions">
                 <button @click="startEdit(zone)" class="action-btn edit">
@@ -269,6 +279,35 @@ function dismiss() {
 .zone-crop {
   font-size: 0.75rem;
   color: var(--ag-text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.zone-uuid-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  width: fit-content;
+  transition: all 0.2s ease;
+}
+
+.zone-uuid-container:hover {
+  background: rgba(var(--ag-primary-rgb), 0.1);
+  color: var(--ag-primary);
+}
+
+.zone-uuid {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.65rem;
+  opacity: 0.7;
+}
+
+.copy-small-icon {
+  font-size: 0.75rem;
+  opacity: 0.5;
 }
 
 .item-actions {
