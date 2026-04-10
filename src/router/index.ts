@@ -17,7 +17,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('@/views/RegisterPage.vue')
   },
   {
-    path: '/tabs/',
+    path: '/tabs',
     component: TabsPage,
     meta: { requiresAuth: true },
     children: [
@@ -67,6 +67,15 @@ router.beforeEach(async (to) => {
   if ((to.path === '/login' || to.path === '/register') && authStore.isAuthenticated) {
     return '/tabs/home';
   }
+
+  return true;
 });
+
+// Fallback route for unknown paths
+routes.push({
+  path: '/:pathMatch(.*)*',
+  redirect: '/tabs/home'
+});
+
 
 export default router

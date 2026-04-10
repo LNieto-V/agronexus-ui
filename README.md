@@ -65,7 +65,7 @@ graph LR
     Login["/login"] -->|on success| Home
     Register["/register"] -->|on success| Home
 
-    subgraph Authenticated["/tabs/ (requiresAuth)"]
+    subgraph Authenticated["/tabs (requiresAuth)"]
         Home["/tabs/home<br/>WelcomeHome"]
         Dashboard["/tabs/dashboard<br/>TelemetryDashboard"]
         Chat["/tabs/assistant<br/>TabChat"]
@@ -114,6 +114,8 @@ graph TD
     TS --> PS["ProfileSettings"]
     TS --> ZM["ZoneManager (Modal)"]
 
+    TD --> ARM["AIReportModal (Modal)"]
+
     ASP --> AKM["ApiKeyModal"]
 ```
 
@@ -132,6 +134,7 @@ graph TD
 | `ActivityLog` | `components/system/` | Historial paginado de acciones de actuadores |
 | `ProfileSettings` | `components/system/` | Edición de nombre y rol del usuario |
 | `ZoneManager` | `components/system/` | CRUD modal para gestionar invernaderos/zonas |
+| `AIReportModal` | `(Inline)` | Configuración de parámetros (horas, enfoque) para informe IA |
 
 ---
 
@@ -255,6 +258,7 @@ sequenceDiagram
 | `iotService.updateZone` | `PATCH` | `zones/{id}/` | — |
 | `iotService.deleteZone` | `DELETE` | `zones/{id}/` | — |
 | `iotService.getActuatorLog` | `GET` | `dashboard/actuator-log` | ✅ |
+| `dashboardService.getAiReportPdf` | `GET` | `dashboard/ai-report` | ✅ |
 | `systemService.generateApiKey` | `POST` | `auth/keys` | ✅ |
 
 ---
@@ -353,7 +357,7 @@ src/
 ├── composables/                    # Lógica de negocio extraída
 │   ├── useActuatorBus.ts           #   Bus reactivo global para acciones de la IA
 │   ├── useSystemControls.ts        #   Lógica de modo, actuadores y generación de keys
-│   ├── useTelemetry.ts             #   Wrapper reactivo sobre telemetryStore
+│   ├── useTelemetry.ts             #   Wrapper reactivo (Store to Refs)
 │   └── useTelemetrySSE.ts          #   Conexión SSE con auto-reconnect (5s)
 │
 ├── router/

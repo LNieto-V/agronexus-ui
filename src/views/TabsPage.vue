@@ -122,7 +122,7 @@ async function handleLogout() {
       </ion-menu>
 
       <!-- Main Content Area -->
-      <div id="main-content" class="ion-page">
+      <div id="main-content">
         <ion-router-outlet />
       </div>
 

@@ -12,15 +12,15 @@ Antes de aplicar cambios, se identificaron los siguientes puntos críticos en el
 
 | Archivo | Problema detectado | Prioridad |
 | :--- | :--- | :---: |
-| `stores/auth.ts` | Usa `supabase.auth.signInWithPassword()` directamente | 🔴 Alta |
-| `stores/auth.ts` | Inyecta JWT desde `supabase.auth.getSession()` | 🔴 Alta |
-| `services/api.ts` | Request interceptor depende del SDK de Supabase para obtener el token | 🔴 Alta |
-| `types/index.ts` | `ChatSendResponse` no incluye `actions[]` ni `alerts[]` del nuevo contrato | 🟠 Media |
-| `stores/conversationsStore.ts` | `sendMessage()` no procesa `actions[]` ni dispara efectos visuales | 🟠 Media |
-| `services/api.ts` | No maneja el error `HTTP 429` (Quota de Gemini) | 🟠 Media |
-| `services/api.ts` | No existe endpoint para `/api/iot/stream` (SSE) ni `/api/zones` | 🟡 Baja |
-| `stores/telemetry.ts` | No implementa paginación (`limit` / `offset`) en actuator-log | 🟡 Baja |
-| `stores/conversationsStore.ts` | No implementa Infinite Scroll para historial de chat | 🟡 Baja |
+| `stores/auth.ts` | Usa `supabase.auth.signInWithPassword()` directamente | ✅ Resuelto |
+| `stores/auth.ts` | Inyecta JWT desde `supabase.auth.getSession()` | ✅ Resuelto |
+| `services/api.ts` | Request interceptor depende del SDK de Supabase | ✅ Resuelto |
+| `types/index.ts` | `ChatSendResponse` contrato incompleto | ✅ Resuelto |
+| `stores/conversationsStore.ts` | `sendMessage()` no procesa `actions[]` | ✅ Resuelto |
+| `services/api.ts` | No maneja el error `HTTP 429` | ✅ Resuelto |
+| `services/api.ts` | SSE y Gestión de Zonas | ✅ Resuelto |
+| `stores/telemetry.ts` | Paginación en logs | ✅ Resuelto |
+| `stores/conversationsStore.ts` | Infinite Scroll Chat | ✅ Resuelto |
 
 ---
 
@@ -657,31 +657,31 @@ export function useTelemetrySSE() {
 Orden recomendado de ejecución para minimizar regresiones:
 
 ### Fase 1 — Fundación (Sin riesgo de regresión)
-- [ ] Agregar nuevos tipos en `src/types/index.ts` (`AiAction`, `ChatResponse`, `Zone`, `ActuatorLogEntry`, `LoginCredentials`, `LoginResponse`)
-- [ ] Crear `src/composables/useActuatorBus.ts`
-- [ ] Crear `src/composables/useTelemetrySSE.ts`
-- [ ] Crear `src/stores/iotStore.ts`
+- [x] Agregar nuevos tipos en `src/types/index.ts` (`AiAction`, `ChatResponse`, `Zone`, `ActuatorLogEntry`, `LoginCredentials`, `LoginResponse`)
+- [x] Crear `src/composables/useActuatorBus.ts`
+- [x] Crear `src/composables/useTelemetrySSE.ts`
+- [x] Crear `src/stores/iotStore.ts`
 
 ### Fase 2 — Migración Auth (Alto impacto, revisar bien)
-- [ ] Refactorizar `src/stores/auth.ts` (eliminar Supabase SDK)
-- [ ] Actualizar Request Interceptor en `src/services/api.ts` (eliminar `supabase.auth.getSession()`)
-- [ ] Agregar handler HTTP 429 en Response Interceptor
-- [ ] Verificar que `LoginPage.vue` y `RegisterPage.vue` sigan funcionando
+- [x] Refactorizar `src/stores/auth.ts` (eliminar Supabase SDK)
+- [x] Actualizar Request Interceptor en `src/services/api.ts` (eliminar `supabase.auth.getSession()`)
+- [x] Agregar handler HTTP 429 en Response Interceptor
+- [x] Verificar que `LoginPage.vue` y `RegisterPage.vue` sigan funcionando
 
 ### Fase 3 — Chat Actions (Funcionalidad nueva)
-- [ ] Actualizar `chatService.sendMessage()` → tipo `ChatResponse`
-- [ ] Refactorizar `sendMessage()` en `conversationsStore.ts` para procesar `actions[]` y `alerts[]`
-- [ ] Integrar `useActuatorBus` en el componente de dashboard
+- [x] Actualizar `chatService.sendMessage()` → tipo `ChatResponse`
+- [x] Refactorizar `sendMessage()` en `conversationsStore.ts` para procesar `actions[]` y `alerts[]`
+- [x] Integrar `useActuatorBus` en el componente de dashboard
 
 ### Fase 4 — Paginación & SSE (Mejoras UX)
-- [ ] Agregar `loadMoreMessages()` con Infinite Scroll en `TabChat.vue`
-- [ ] Integrar `useIotStore.fetchActuatorLogs()` con Infinite Scroll en el componente de logs
-- [ ] Integrar `useTelemetrySSE()` en `TabsPage.vue`
+- [x] Agregar `loadMoreMessages()` con Infinite Scroll en `TabChat.vue`
+- [x] Integrar `useIotStore.fetchActuatorLogs()` con Infinite Scroll en el componente de logs
+- [x] Integrar `useTelemetrySSE()` en `TabsPage.vue`
 
 ### Fase 5 — Zonas & UX
-- [ ] Integrar `iotStore.fetchZones()` con selector en `TelemetryDashboard.vue`
-- [ ] Implementar micro-animación `pulse-green` en actuadores del dashboard
-- [ ] QA: Verificar flujo completo Login → Chat → Dashboard → SSE
+- [x] Integrar `iotStore.fetchZones()` con selector en `TelemetryDashboard.vue`
+- [x] Implementar micro-animación `pulse-green` en actuadores del dashboard
+- [x] QA: Verificar flujo completo Login → Chat → Dashboard → SSE
 
 ---
 

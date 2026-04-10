@@ -6,6 +6,12 @@ export interface TelemetryData {
   ec: number;
   light: number;
   timestamp: string;
+  // Nuevos campos opcionales
+  co2?: number;
+  vpd?: number;
+  tank_level?: number;
+  soil_temperature?: number;
+  soil_moisture?: number;
 }
 
 export type TelemetryKey = keyof Omit<TelemetryData, 'timestamp'>;
@@ -16,6 +22,10 @@ export interface TelemetryPayload {
   ph: number;
   ec: number;
   light: number;
+  co2?: number;
+  tank_level?: number;
+  soil_temperature?: number;
+  soil_moisture?: number;
 }
 
 /** IoT domain types — New */

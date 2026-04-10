@@ -28,6 +28,11 @@ export const useTelemetryStore = defineStore('telemetry', () => {
         ph: (raw.ph ?? raw.p) as number,
         ec: (raw.ec ?? raw.e) as number,
         light: (raw.light ?? raw.lux ?? raw.l) as number,
+        co2: (raw.co2 ?? raw.c) as number | undefined,
+        vpd: (raw.vpd ?? raw.v) as number | undefined,
+        tank_level: (raw.tank_level ?? raw.tl) as number | undefined,
+        soil_temperature: (raw.soil_temperature ?? raw.st) as number | undefined,
+        soil_moisture: (raw.soil_moisture ?? raw.sm) as number | undefined,
         timestamp: (response.data.timestamp || raw.created_at || new Date().toISOString()) as string
       };
     } catch (err: unknown) {
@@ -50,6 +55,11 @@ export const useTelemetryStore = defineStore('telemetry', () => {
         ph: (item.ph ?? item.p ?? 0) as number,
         ec: (item.ec ?? item.e ?? 0) as number,
         light: (item.light ?? item.lux ?? item.l ?? 0) as number,
+        co2: (item.co2 ?? item.c) as number | undefined,
+        vpd: (item.vpd ?? item.v) as number | undefined,
+        tank_level: (item.tank_level ?? item.tl) as number | undefined,
+        soil_temperature: (item.soil_temperature ?? item.st) as number | undefined,
+        soil_moisture: (item.soil_moisture ?? item.sm) as number | undefined,
         timestamp: (item.timestamp || item.created_at || new Date().toISOString()) as string
       })).sort((a: TelemetryData, b: TelemetryData) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     } catch (err: unknown) {
@@ -64,6 +74,11 @@ export const useTelemetryStore = defineStore('telemetry', () => {
       ph: (data.ph ?? data.p ?? 0) as number,
       ec: (data.ec ?? data.e ?? 0) as number,
       light: (data.light ?? data.lux ?? data.l ?? 0) as number,
+      co2: (data.co2 ?? data.c) as number | undefined,
+      vpd: (data.vpd ?? data.v) as number | undefined,
+      tank_level: (data.tank_level ?? data.tl) as number | undefined,
+      soil_temperature: (data.soil_temperature ?? data.st) as number | undefined,
+      soil_moisture: (data.soil_moisture ?? data.sm) as number | undefined,
       timestamp: (data.timestamp || new Date().toISOString()) as string
     };
     

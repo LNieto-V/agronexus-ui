@@ -82,6 +82,16 @@ export const dashboardService = {
   getState: (): Promise<AxiosResponse<DashboardStateResponse>> => api.get('dashboard/state'),
   updateMode: (mode: SystemMode): Promise<AxiosResponse<unknown>> => api.post('dashboard/mode', { mode }),
   postTelemetry: (data: TelemetryPayload): Promise<AxiosResponse<unknown>> => api.post('iot/telemetry', data),
+  exportHistory: (period = 30): Promise<AxiosResponse<Blob>> => 
+    api.get('dashboard/export', { 
+      params: { period },
+      responseType: 'blob'
+    }),
+  getAiReportPdf: (zone_id?: string | null, hours = 24, focus = 'general'): Promise<AxiosResponse<Blob>> =>
+    api.get('dashboard/ai-report', {
+      params: { zone_id, hours, focus },
+      responseType: 'blob'
+    }),
 };
 
 export const chatService = {
