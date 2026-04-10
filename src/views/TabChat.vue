@@ -13,7 +13,8 @@ import {
   ellipsisVerticalOutline,
   pencilOutline,
   chatbubbleEllipsesOutline,
-  timeOutline
+  timeOutline,
+  downloadOutline
 } from 'ionicons/icons';
 import { ref, nextTick, onMounted, computed, watch } from 'vue';
 import { useConversationsStore } from '@/stores/conversationsStore';
@@ -167,6 +168,39 @@ async function confirmDelete(conv: Conversation) {
 const formatDate = (dateStr: string) => {
   return new Date(dateStr).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
+
+function printMessage(msgId: string) {
+  const msgElement = document.getElementById(`msg-${msgId}`);
+  if (!msgElement) return;
+
+  // Creamos una ventana temporal para imprimir solo ese mensaje
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) return;
+
+  const content = msgElement.innerHTML;
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Reporte AgroNexus AI</title>
+        <style>
+          body { font-family: sans-serif; padding: 40px; color: #333; }
+          h2 { color: #10b981; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          th { background: #10b981; color: white; padding: 10px; text-align: left; }
+          td { border: 1px solid #eee; padding: 10px; }
+          .meta { font-size: 12px; color: #888; margin-top: 20px; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
+        </style>
+      </head>
+      <body>
+        ${content}
+        <div class="meta">Generado por AgroNexus AI el ${new Date().toLocaleString()}</div>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.print();
+  printWindow.close();
+}
 </script>
 
 <template>
@@ -278,12 +312,15 @@ const formatDate = (dateStr: string) => {
               <ion-infinite-scroll-content loading-spinner="crescent"></ion-infinite-scroll-content>
             </ion-infinite-scroll>
 
-            <div v-for="msg in messages" :key="msg.id" :class="['message-wrapper', msg.role]">
+            <div v-for="msg in messages" :key="msg.id" :class="['message-wrapper', msg.role]" :id="'msg-' + msg.id">
               <div class="message-bubble">
                 <div class="markdown-body" v-html="renderMarkdown(msg.message)"></div>
               </div>
-              <div class="message-meta">
-                {{ msg.role === 'user' ? 'You' : 'AgroNexus' }} &bull; {{ new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
+              <div class="message-meta ag-flex-row ag-flex-between">
+                <span>{{ msg.role === 'user' ? 'You' : 'AgroNexus' }} &bull; {{ new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</span>
+                <ion-button v-if="msg.role === 'ai'" fill="clear" size="small" class="msg-download-btn no-print" @click="printMessage(msg.id)">
+                  <ion-icon :icon="downloadOutline" slot="icon-only" />
+                </ion-button>
               </div>
             </div>
 
@@ -716,6 +753,22 @@ const formatDate = (dateStr: string) => {
 .empty-icon {
   font-size: 3rem;
   margin-bottom: 1rem;
+}
+.msg-download-btn {
+  --color: var(--ag-primary);
+  margin: 0;
+  height: 20px;
+  width: 20px;
+  opacity: 0.4;
+  transition: opacity 0.3s ease;
+}
+
+.message-wrapper:hover .msg-download-btn {
+  opacity: 1;
+}
+
+@media print {
+  .no-print { display: none !important; }
 }
 </style>
 

@@ -235,15 +235,30 @@ export const useConversationsStore = defineStore('conversations', () => {
       }
 
       return response.data;
-    } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : 'Error al enviar el mensaje';
+    } catch (err: any) {
+      const is429 = err.response && err.response.status === 429;
+      const baseErrorMsg = err instanceof Error ? err.message : 'Error al enviar el mensaje';
+      const errMsg = is429 
+        ? 'El servicio de análisis de IA está operando al máximo de su capacidad. Por favor, reintenta en unos segundos.'
+        : baseErrorMsg;
+        
       error.value = errMsg;
+
+      if (is429) {
+        const toast = await toastController.create({
+          message: errMsg,
+          duration: 5000,
+          color: 'warning',
+          position: 'top',
+        });
+        await toast.present();
+      }
 
       // Show error as AI bubble so the user gets visual feedback
       const errorMessage: ChatMessage = {
         id: (Date.now() + 2).toString(),
         role: 'ai',
-        message: `> **Error**: ${errMsg}. Revisa tu conexión o intenta de nuevo.`,
+        message: `> **Error**: ${errMsg}. Revisa tu conexión o intenta de nuevo en unos momentos.`,
         created_at: new Date().toISOString(),
         session_id: activeSessionId.value,
       };

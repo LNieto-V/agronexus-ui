@@ -8,6 +8,7 @@ import {
   thermometerOutline, 
   chatbubbleEllipsesOutline, 
   pulseOutline,
+  documentTextOutline,
   logOutOutline
 } from 'ionicons/icons';
 import { onMounted } from 'vue';
@@ -97,6 +98,18 @@ async function handleLogout() {
                 <ion-icon slot="start" :icon="pulseOutline" />
                 <ion-label>Systems</ion-label>
               </ion-item>
+
+              <ion-item 
+                button 
+                router-link="/tabs/reports" 
+                :detail="false" 
+                class="sidebar-item"
+                :class="{ 'item-active': route.path === '/tabs/reports' }"
+              >
+                <div class="active-indicator"></div>
+                <ion-icon slot="start" :icon="documentTextOutline" />
+                <ion-label>Informes</ion-label>
+              </ion-item>
             </ion-menu-toggle>
           </ion-list>
 
@@ -122,9 +135,7 @@ async function handleLogout() {
       </ion-menu>
 
       <!-- Main Content Area -->
-      <div id="main-content">
-        <ion-router-outlet />
-      </div>
+      <ion-router-outlet id="main-content" />
 
     </ion-split-pane>
   </ion-page>

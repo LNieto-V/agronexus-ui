@@ -2,13 +2,12 @@
 import { 
   IonPage, IonHeader, IonToolbar, IonTitle, IonContent,
   IonButtons, IonButton, IonIcon, IonMenuButton,
-  IonSelect, IonSelectOption, IonModal, IonList,
-  IonItem, IonLabel, IonRadioGroup, IonRadio, IonFooter
+  IonSelect, IonSelectOption, IonSpinner, toastController
 } from '@ionic/vue';
 import { 
   thermometerOutline, waterOutline, flaskOutline, leafOutline, 
   refreshOutline, warningOutline, sunnyOutline, downloadOutline,
-  sparklesOutline, documentTextOutline, closeOutline, checkmarkOutline
+  sparklesOutline, documentTextOutline
 } from 'ionicons/icons';
 import { onMounted, computed, shallowRef, watch } from 'vue';
 import { useTelemetryStore } from '@/stores/telemetry';
@@ -21,7 +20,7 @@ import { useIotStore } from '@/stores/iotStore';
 import { useConversationsStore } from '@/stores/conversationsStore';
 import { useRouter } from 'vue-router';
 import { dashboardService } from '@/services/api';
-import { toastController } from '@ionic/vue';
+
 import { useActuatorBus } from '@/composables/useActuatorBus';
 import type { TelemetryKey } from '@/types';
 
@@ -33,13 +32,6 @@ const { latest, loading, history } = useTelemetry();
 const { pendingActions } = useActuatorBus();
 const timeRange = shallowRef('5h');
 const isExporting = shallowRef(false);
-const isGeneratingReport = shallowRef(false);
-const isReportModalOpen = shallowRef(false);
-
-const reportOptions = shallowRef({
-  timeRange: '24',
-  focus: 'general'
-});
 
 const isBombaActive = computed(() =>
   pendingActions.value.some(a => (a.device === 'BOMBA' || a.device === 'WATER') && a.action === 'ON')
@@ -106,44 +98,6 @@ async function handleExport() {
   }
 }
 
-async function generateAIReport() {
-  isGeneratingReport.value = true;
-  isReportModalOpen.value = false;
-  
-  try {
-    const response = await dashboardService.getAiReportPdf(
-      iotStore.selectedZoneId,
-      parseInt(reportOptions.value.timeRange),
-      reportOptions.value.focus
-    );
-    const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `informe_salud_${new Date().toISOString().slice(0,10)}.pdf`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    const toast = await toastController.create({
-      message: 'Informe PDF generado con éxito',
-      duration: 2000,
-      color: 'success',
-      position: 'bottom'
-    });
-    await toast.present();
-  } catch (error) {
-    console.error('Error generating AI PDF:', error);
-    const toast = await toastController.create({
-      message: 'Error al generar el PDF. Verifica tu conexión.',
-      duration: 3000,
-      color: 'danger',
-      position: 'bottom'
-    });
-    await toast.present();
-  } finally {
-    isGeneratingReport.value = false;
-  }
-}
 
 watch(() => iotStore.selectedZoneId, () => {
   refreshData();
@@ -174,14 +128,14 @@ onMounted(() => {
     <ion-content :fullscreen="true">
       <div class="ag-container py-6">
         <!-- Header Section -->
-        <div class="ag-flex-col md:ag-flex-row md:ag-flex-between gap-4 mb-8">
+        <div class="ag-flex-col md:ag-flex-row md:justify-between items-start md:items-center gap-4 mb-8">
           <div>
             <h2 class="text-2xl md:text-3xl font-bold tracking-tight mb-1">Overview</h2>
             <div class="ag-flex-row gap-2">
               <span class="status-dot bg-primary"></span>
               <p class="text-sm font-medium text-muted">System Online &bull; Live Sensors</p>
             </div>
-            <div class="actuators-status ag-flex-row gap-3 mt-3">
+            <div class="actuators-status ag-flex-row ag-flex-wrap gap-2 mt-3">
               <div class="actuator-badge" :class="{ 'pulse-green': isBombaActive }">
                 <ion-icon :icon="waterOutline" />
                 <span>Pump</span>
@@ -192,13 +146,13 @@ onMounted(() => {
               </div>
             </div>
           </div>
-          <div class="ag-flex-row gap-4">
-            <div class="zone-selector-wrapper">
+          <div class="ag-flex-row ag-flex-wrap gap-3 mt-4 md:mt-0 items-center">
+            <div class="zone-selector-wrapper flex-grow md:flex-grow-0 items-center flex">
               <ion-select 
                 v-model="iotStore.selectedZoneId" 
                 placeholder="All Greenhouse Zones"
                 interface="popover"
-                class="premium-select"
+                class="premium-select w-full"
               >
                 <ion-select-option :value="null">All Greenhouse Zones</ion-select-option>
                 <ion-select-option 
@@ -210,7 +164,7 @@ onMounted(() => {
                 </ion-select-option>
               </ion-select>
             </div>
-            <SegmentedControl v-model="timeRange" :options="['1h', '5h', '24h']" />
+            <SegmentedControl v-model="timeRange" :options="['1h', '5h', '24h']" class="flex-grow md:flex-grow-0" />
           </div>
         </div>
 
@@ -220,10 +174,10 @@ onMounted(() => {
             <ion-icon :icon="leafOutline" class="text-primary" />
             Environmental Clima
           </h3>
-          <div v-if="loading && !latest" class="ag-grid sm:ag-grid-2 md:ag-grid-4 lg:ag-desktop-grid-6">
+          <div v-if="loading && !latest" class="ag-grid sm:ag-grid-2 md:ag-grid-3 lg:ag-desktop-grid-5">
             <SkeletonCard v-for="i in 4" :key="i" />
           </div>
-          <div v-else class="ag-grid sm:ag-grid-2 md:ag-grid-4 lg:ag-desktop-grid-6" :class="{ 'refreshing': loading }">
+          <div v-else class="ag-grid sm:ag-grid-2 md:ag-grid-3 lg:ag-desktop-grid-5" :class="{ 'refreshing': loading }">
             <TelemetryCard label="Air Temp" :value="latest?.temperature ?? '--'" unit="°C" :icon="thermometerOutline" color="red" :progress="calcProgress(latest?.temperature, 0, 40)" />
             <TelemetryCard label="Air Humidity" :value="latest?.humidity ?? '--'" unit="%" :icon="waterOutline" color="blue" :progress="latest?.humidity ?? 0" />
             <TelemetryCard v-if="latest?.vpd !== undefined" label="VPD (Health)" :value="latest?.vpd" unit="kPa" :icon="flaskOutline" :color="latest?.vpd > 1.2 ? 'red' : (latest?.vpd > 0.8 ? 'yellow' : 'primary')" :progress="calcProgress(latest?.vpd, 0, 2)" />
@@ -276,8 +230,8 @@ onMounted(() => {
           </h3>
           <div class="ag-grid ag-grid-1 md:ag-grid-2 gap-4">
             <!-- CSV Export Card -->
-            <div class="ag-card ag-glass p-6 ag-flex-row ag-flex-between items-center group hover:border-primary/30 transition-all cursor-pointer" @click="handleExport">
-              <div class="ag-flex-row gap-4">
+            <div class="ag-card ag-glass p-5 md:p-6 ag-flex-row ag-flex-wrap ag-flex-between items-center group hover:border-primary/30 transition-all cursor-pointer" @click="handleExport">
+              <div class="ag-flex-row ag-flex-wrap gap-4">
                 <div class="ag-icon-box bg-blue-soft text-blue">
                   <ion-icon :icon="downloadOutline" />
                 </div>
@@ -290,88 +244,19 @@ onMounted(() => {
             </div>
 
             <!-- AI Health Report Card -->
-            <div class="ag-card ag-glass p-6 ag-flex-row ag-flex-between items-center group hover:border-primary/50 transition-all cursor-pointer" @click="isReportModalOpen = true">
-              <div class="ag-flex-row gap-4">
+            <div class="ag-card ag-glass p-5 md:p-6 ag-flex-row ag-flex-wrap ag-flex-between items-center group hover:border-primary/50 transition-all cursor-pointer" @click="router.push('/tabs/reports')">
+              <div class="ag-flex-row ag-flex-wrap gap-4">
                 <div class="ag-icon-box bg-primary-soft text-primary">
                   <ion-icon :icon="sparklesOutline" />
                 </div>
                 <div>
-                  <p class="font-bold text-lg">Diagnóstico de Salud IA</p>
-                  <p v-if="isGeneratingReport" class="text-sm text-primary animate-pulse">Analizando tendencias y generando PDF...</p>
-                  <p v-else class="text-sm text-muted">Informe agronómico avanzado con gráficos (PDF)</p>
+                  <p class="font-bold text-lg">Asesor Agronómico Digital</p>
+                  <p class="text-sm text-muted">Análisis basado en IA de tendencias y salud del cultivo</p>
                 </div>
               </div>
-              <ion-spinner v-if="isGeneratingReport" name="crescent" color="primary" />
-              <ion-icon v-else :icon="sparklesOutline" class="text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
           </div>
         </div>
-
-        <!-- Report Configuration Modal -->
-        <ion-modal :is-open="isReportModalOpen" @didDismiss="isReportModalOpen = false" class="premium-modal">
-          <ion-header class="ion-no-border">
-            <ion-toolbar class="px-2">
-              <ion-title>Configurar Informe IA</ion-title>
-              <ion-buttons slot="end">
-                <ion-button @click="isReportModalOpen = false">
-                  <ion-icon :icon="closeOutline" />
-                </ion-button>
-              </ion-buttons>
-            </ion-toolbar>
-          </ion-header>
-          <ion-content class="ion-padding">
-            <div class="mb-6">
-              <h4 class="text-sm font-bold uppercase tracking-widest text-muted mb-4">Enfoque del Informe</h4>
-              <ion-list class="ag-glass rounded-2xl overflow-hidden border border-white/5 mb-6">
-                <ion-radio-group v-model="reportOptions.focus">
-                  <ion-item lines="full" class="ag-item-clear">
-                    <ion-label>General / Salud Global</ion-label>
-                    <ion-radio slot="end" value="general"></ion-radio>
-                  </ion-item>
-                  <ion-item lines="full" class="ag-item-clear">
-                    <ion-label>Plagas y Enfermedades</ion-label>
-                    <ion-radio slot="end" value="pests"></ion-radio>
-                  </ion-item>
-                  <ion-item lines="none" class="ag-item-clear">
-                    <ion-label>Optimización de Nutrientes</ion-label>
-                    <ion-radio slot="end" value="nutrition"></ion-radio>
-                  </ion-item>
-                </ion-radio-group>
-              </ion-list>
-
-              <h4 class="text-sm font-bold uppercase tracking-widest text-muted mb-4">Rango de Datos</h4>
-              <ion-list class="ag-glass rounded-2xl overflow-hidden border border-white/5">
-                <ion-radio-group v-model="reportOptions.timeRange">
-                  <ion-item lines="full" class="ag-item-clear">
-                    <ion-label>Últimas 24 horas</ion-label>
-                    <ion-radio slot="end" value="24"></ion-radio>
-                  </ion-item>
-                  <ion-item lines="full" class="ag-item-clear">
-                    <ion-label>Últimas 48 horas</ion-label>
-                    <ion-radio slot="end" value="48"></ion-radio>
-                  </ion-item>
-                  <ion-item lines="none" class="ag-item-clear">
-                    <ion-label>Última semana</ion-label>
-                    <ion-radio slot="end" value="168"></ion-radio>
-                  </ion-item>
-                </ion-radio-group>
-              </ion-list>
-            </div>
-
-            <div class="mb-8 p-4 bg-primary/10 border border-primary/20 rounded-2xl flex gap-4">
-              <div class="text-primary text-xl"><ion-icon :icon="sparklesOutline" /></div>
-              <p class="text-xs text-muted leading-relaxed">
-                Nuestra IA analizará automáticamente las tendencias de temperatura, VPD y salud del suelo para redactar un informe profesional descargable.
-              </p>
-            </div>
-          </ion-content>
-          <ion-footer class="ion-no-border ion-padding">
-            <ion-button expand="block" shape="round" class="premium-btn" @click="generateAIReport">
-              <ion-icon :icon="checkmarkOutline" slot="start" />
-              Generar Informe PDF
-            </ion-button>
-          </ion-footer>
-        </ion-modal>
 
         <!-- Alerts -->
         <div v-if="hasAlerts" class="ag-card ag-glass alert-card p-4 ag-flex-row gap-4">

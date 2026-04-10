@@ -53,9 +53,11 @@ body {
 
 /** Global Layout Utilities **/
 .ag-container {
+  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 1rem;
+  box-sizing: border-box;
 }
 
 @media (min-width: 768px) {
@@ -66,8 +68,21 @@ body {
 
 .ag-flex-row { display: flex; align-items: center; }
 .ag-flex-col { display: flex; flex-direction: column; }
+.ag-flex-wrap { flex-wrap: wrap; }
+.ag-flex-nowrap { flex-wrap: nowrap; }
 .ag-flex-center { display: flex; align-items: center; justify-content: center; }
 .ag-flex-between { display: flex; align-items: center; justify-content: space-between; }
+
+.items-start { align-items: flex-start; }
+.items-center { align-items: center; }
+.items-baseline { align-items: baseline; }
+.justify-start { justify-content: flex-start; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+
+.flex-grow { flex-grow: 1; }
+.flex-grow-0 { flex-grow: 0; }
+.flex-shrink-0 { flex-shrink: 0; }
 
 /** Mobile First Grid **/
 .ag-grid { 
@@ -78,18 +93,29 @@ body {
 
 @media (min-width: 640px) {
   .sm\:ag-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sm\:ag-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 @media (min-width: 768px) {
+  .md\:ag-flex-row { display: flex; flex-direction: row; align-items: center; }
+  .md\:ag-flex-between { display: flex; justify-content: space-between; align-items: center; }
   .md\:ag-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .md\:ag-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .md\:ag-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .md\:flex-grow-0 { flex-grow: 0; }
+  .md\:w-auto { width: auto; }
+  .md\:w-64 { width: 16rem; }
   .ag-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ag-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ag-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 @media (min-width: 1024px) {
-  .lg\:ag-desktop-grid-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .lg\:ag-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lg\:ag-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .lg\:ag-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .lg\:ag-desktop-grid-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .lg\:ag-desktop-grid-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 }
 
 /** Responsive Visibility **/
@@ -99,6 +125,12 @@ body {
 
 @media (min-width: 768px) {
   .hide-on-desktop { display: none !important; }
+}
+
+#main-content {
+  height: 100%;
+  width: 100%;
+  display: block;
 }
 
 /** UI Components **/
@@ -288,11 +320,8 @@ ion-menu {
 .overflow-hidden { overflow: hidden; }
 .sticky { position: sticky; }
 .top-6 { top: 1.5rem; }
-.items-start { align-items: flex-start; }
-.items-baseline { align-items: baseline; }
 .self-end { align-self: flex-end; }
 .self-start { align-self: flex-start; }
-.flex-grow { flex-grow: 1; }
 .break-all { word-break: break-all; }
 .font-mono { font-family: 'Courier New', Courier, monospace; }
 .leading-relaxed { line-height: 1.625; }
@@ -300,6 +329,11 @@ ion-menu {
 .max-width-800 { max-width: 800px; }
 .max-width-900 { max-width: 900px; }
 .text-center { text-align: center; }
+.hover-primary:hover {
+  background: rgba(var(--ag-primary-rgb), 0.1);
+  border-color: var(--ag-primary);
+  transform: translateY(-2px);
+}
 .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
 
@@ -342,7 +376,6 @@ ion-menu {
   .lg\:grid-cols-\[1fr_380px\] { grid-template-columns: 1fr 380px; }
 }
 
-.sm\:ag-grid-2 { grid-template-columns: repeat(2, 1fr); }
 @media (min-width: 640px) {
   .sm\:ag-grid-2 { grid-template-columns: repeat(2, 1fr); }
 }
@@ -363,4 +396,49 @@ ion-menu {
   font-size: 0.85em;
   padding: 0.2em 0.4em;
   border-radius: 4px;
+}
+
+/** Print Layout Overrides **/
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  ion-menu, 
+  ion-tab-bar, 
+  ion-toolbar, 
+  ion-buttons, 
+  ion-footer,
+  .no-print,
+  .hide-on-print,
+  .ag-sidebar,
+  .sidebar-content {
+    display: none !important;
+  }
+
+  ion-split-pane {
+    --side-width: 0px !important;
+    display: block !important;
+  }
+
+  #main-content {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  ion-content {
+    --background: white !important;
+    --color: black !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .ag-container {
+    max-width: none !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
 }

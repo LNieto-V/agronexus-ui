@@ -67,14 +67,14 @@ const handleLogInfinite = (event: any) => {
         </ion-buttons>
         <ion-title class="font-bold text-lg">System & Hardware</ion-title>
         <ion-buttons slot="end">
-          <div class="zone-selector-wrapper">
+          <div class="zone-selector-wrapper hide-on-mobile">
             <ion-select 
               v-model="iotStore.selectedZoneId" 
-              placeholder="All Greenhouse Zones"
+              placeholder="All Zones"
               interface="popover"
               class="premium-select"
             >
-              <ion-select-option :value="null">All Greenhouse Zones</ion-select-option>
+              <ion-select-option :value="null">All Zones</ion-select-option>
               <ion-select-option 
                 v-for="zone in iotStore.zones" 
                 :key="zone.id" 
@@ -92,20 +92,20 @@ const handleLogInfinite = (event: any) => {
       <div class="ag-container py-6 md:py-10 max-width-900">
         
         <!-- Header & Status -->
-        <div class="ag-flex-between mb-8 md:mb-12">
+        <div class="ag-flex-row ag-flex-wrap justify-between items-start mb-8 md:mb-12 gap-6">
           <div>
-            <h2 class="text-3xl font-bold tracking-tight">Main Controller</h2>
-            <p class="text-muted mt-2 text-base">Node 01 &bull; Active <span class="text-primary">&bull; Synced</span></p>
+            <h2 class="text-2xl md:text-3xl font-bold tracking-tight">Main Controller</h2>
+            <p class="text-muted mt-2 text-sm md:text-base">Node 01 &bull; Active <span class="text-primary">&bull; Synced</span></p>
           </div>
-          <div class="ag-flex-row gap-4">
-            <button @click="openZoneManager" class="ag-card ag-glass px-4 py-2 rounded-full ag-flex-row gap-2 hover-primary transition-all">
+          <div class="ag-flex-row ag-flex-wrap gap-3 items-center">
+            <button @click="openZoneManager" class="ag-card ag-glass px-4 py-2 rounded-full ag-flex-row gap-2 items-center hover-primary transition-all">
               <ion-icon :icon="businessOutline" class="text-primary" />
               <span class="text-sm font-bold">Zones</span>
             </button>
-            <div class="ag-card ag-glass px-4 py-2 rounded-full ag-flex-row gap-3">
+            <div class="ag-card ag-glass px-4 py-2 rounded-full ag-flex-row gap-3 items-center">
               <div class="w-2-5 h-2-5 rounded-full" :class="isOnline ? 'bg-primary' : 'bg-danger'"></div>
               <span class="text-sm font-bold uppercase tracking-wider" :class="isOnline ? 'text-primary' : 'text-danger'">
-                {{ isOnline ? 'System Online' : 'System Offline' }}
+                {{ isOnline ? 'Online' : 'Offline' }}
               </span>
             </div>
           </div>

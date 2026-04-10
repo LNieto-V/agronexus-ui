@@ -14,6 +14,7 @@ import type {
 } from '@/types';
 import router from '@/router';
 import { toastController } from '@ionic/vue';
+import { useAuthStore } from '@/stores/auth';
 
 const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 const finalBaseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl : `${rawBaseUrl}/`;
@@ -36,13 +37,11 @@ api.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
-// Response Interceptor: Handle errors
 api.interceptors.response.use((response) => {
   return response;
 }, async (error) => {
   // --- 401 Unauthorized: session expired ---
   if (error.response?.status === 401) {
-    const { useAuthStore } = await import('@/stores/auth');
     const authStore = useAuthStore();
     
     const toast = await toastController.create({
@@ -56,19 +55,6 @@ api.interceptors.response.use((response) => {
     
     authStore.signOut();
     router.push('/login');
-  }
-
-  // --- 429 Too Many Requests: Gemini Quota exhausted ---
-  if (error.response?.status === 429) {
-    const toast = await toastController.create({
-      message: '🌿 The AI is resting, please try again in a minute.',
-      duration: 5000,
-      color: 'tertiary',
-      position: 'top',
-      cssClass: 'premium-toast',
-      // icon: 'timer-outline' // Handled by Ionic CSS or just text
-    });
-    await toast.present();
   }
 
   return Promise.reject(error);
@@ -87,11 +73,6 @@ export const dashboardService = {
       params: { period },
       responseType: 'blob'
     }),
-  getAiReportPdf: (zone_id?: string | null, hours = 24, focus = 'general'): Promise<AxiosResponse<Blob>> =>
-    api.get('dashboard/ai-report', {
-      params: { zone_id, hours, focus },
-      responseType: 'blob'
-    }),
 };
 
 export const chatService = {
@@ -99,6 +80,8 @@ export const chatService = {
     api.post('chat', { message, session_id }),
   getHistory: (session_id?: string | null, limit = 50, offset = 0): Promise<AxiosResponse<ChatHistoryResponse>> => 
     api.get('chat/history', { params: { session_id, limit, offset } }),
+  generateReport: (data: { zone_id?: string | null, hours: number, focus: string, session_id?: string | null }): Promise<AxiosResponse<ChatResponse>> =>
+    api.post('chat/report', data),
 };
 
 export const iotService = {

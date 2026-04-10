@@ -40,6 +40,10 @@ const routes: Array<RouteRecordRaw> = [
       {
         path: 'control',
         component: () => import('@/views/TabSystem.vue')
+      },
+      {
+        path: 'reports',
+        component: () => import('@/views/ReportsPage.vue')
       }
     ]
   }
