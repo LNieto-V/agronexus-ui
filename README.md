@@ -2,7 +2,7 @@
 
 > **Stack**: Ionic 8 + Vue 3 (Composition API) + Pinia + Axios  
 > **Backend**: FastAPI DDD-Lite (comunicación exclusiva por API REST + SSE)  
-> **Versión**: 2.5.0 — Abril 2026  
+> **Versión**: 2.6.0 — Abril 2026  
 
 ---
 
@@ -69,11 +69,13 @@ graph LR
         Home["/tabs/home<br/>WelcomeHome"]
         Dashboard["/tabs/dashboard<br/>TelemetryDashboard"]
         Chat["/tabs/assistant<br/>TabChat"]
+        Reports["/tabs/reports<br/>ReportsPage"]
         System["/tabs/control<br/>TabSystem"]
     end
 
     Home --- Dashboard
     Home --- Chat
+    Home --- Reports
     Home --- System
 ```
 
@@ -84,6 +86,7 @@ graph LR
 | `/tabs/home` | `WelcomeHome.vue` | Landing con métricas de resumen y accesos rápidos | Auth |
 | `/tabs/dashboard` | `TelemetryDashboard.vue` | Gráficos en tiempo real con filtro por zona | Auth |
 | `/tabs/assistant` | `TabChat.vue` | Asistente IA multi-sesión con markdown | Auth |
+| `/tabs/reports` | `ReportsPage.vue` | Generador de informes IA con selección de zona, enfoque y rango | Auth |
 | `/tabs/control` | `TabSystem.vue` | Gestión de hardware, zonas y seguridad | Auth |
 
 > **Router Guard**: Un `beforeEach` global verifica `authStore.isAuthenticated`. Si el token expira (401 del backend), el interceptor de Axios limpia el estado y redirige a `/login` automáticamente.
@@ -100,6 +103,7 @@ graph TD
     TabsPage --> WH["WelcomeHome"]
     TabsPage --> TD["TelemetryDashboard"]
     TabsPage --> TC["TabChat"]
+    TabsPage --> RP["ReportsPage"]
     TabsPage --> TS["TabSystem"]
 
     TD --> TC1["TelemetryCard x5"]
@@ -107,14 +111,17 @@ graph TD
     TD --> SK["SkeletonCard"]
     TD --> SEG["SegmentedControl"]
 
+    RP --> MR["MarkdownRenderer"]
+    RP --> RPT["ReportPdfTemplate"]
+
+    TC --> MR2["renderMarkdown (inline)"]
+
     TS --> MTC["ModeToggleCard"]
     TS --> EC["EnvironmentControls"]
     TS --> ASP["ApiSecurityPanel"]
     TS --> AL["ActivityLog"]
     TS --> PS["ProfileSettings"]
     TS --> ZM["ZoneManager (Modal)"]
-
-    TD --> ARM["AIReportModal (Modal)"]
 
     ASP --> AKM["ApiKeyModal"]
 ```
@@ -134,7 +141,8 @@ graph TD
 | `ActivityLog` | `components/system/` | Historial paginado de acciones de actuadores |
 | `ProfileSettings` | `components/system/` | Edición de nombre y rol del usuario |
 | `ZoneManager` | `components/system/` | CRUD modal para gestionar invernaderos/zonas |
-| `AIReportModal` | `(Inline)` | Configuración de parámetros (horas, enfoque) para informe IA |
+| `MarkdownRenderer` | `components/` | Renderizado seguro de Markdown con soporte para tablas GFM y GitHub Alerts (`[!WARNING]`, `[!NOTE]`, etc.) |
+| `ReportPdfTemplate` | `components/` | Template HTML oculto para exportación de informes IA a PDF vía `html2pdf` |
 
 ---
 
@@ -239,7 +247,7 @@ sequenceDiagram
         Note over Axios: Response Interceptor<br/>1. Llama authStore.signOut()<br/>2. Toast "Session expired"<br/>3. router.push("/login")
     else 429 Too Many Requests
         Backend-->>Axios: 429
-        Note over Axios: Response Interceptor<br/>Toast "AI resting"
+        Note over Component: Manejado por cada Store/Vista<br/>Toast contextual + libera spinner
     end
 ```
 
@@ -253,12 +261,12 @@ sequenceDiagram
 | `dashboardService.updateMode` | `POST` | `dashboard/mode` | ❌ |
 | `chatService.sendMessage` | `POST` | `chat` | ❌ |
 | `chatService.getHistory` | `GET` | `chat/history` | ❌ |
+| `chatService.generateReport` | `POST` | `chat/report` | ✅ |
 | `iotService.getZones` | `GET` | `zones/` | — |
 | `iotService.createZone` | `POST` | `zones/` | — |
 | `iotService.updateZone` | `PATCH` | `zones/{id}/` | — |
 | `iotService.deleteZone` | `DELETE` | `zones/{id}/` | — |
 | `iotService.getActuatorLog` | `GET` | `dashboard/actuator-log` | ✅ |
-| `dashboardService.getAiReportPdf` | `GET` | `dashboard/ai-report` | ✅ |
 | `systemService.generateApiKey` | `POST` | `auth/keys` | ✅ |
 
 ---
@@ -336,12 +344,41 @@ sequenceDiagram
 
 ---
 
+## 🛡️ Resiliencia y Degradación Elegante
+
+### Manejo de HTTP 429 (Too Many Requests)
+
+Cuando el backend agota la cuota de la API de IA (Gemini), responde con `429`. El frontend maneja este escenario **en cada punto de consumo** (no en el interceptor global) para ofrecer mensajes contextuales:
+
+| Punto de consumo | Archivo | Comportamiento |
+|---|---|---|
+| Chat IA | `conversationsStore.ts` | Toast warning + burbuja de error en el chat + libera `isSending` |
+| Generación de Reporte | `ReportsPage.vue` | Toast warning + libera `isGenerating` (spinner se detiene) |
+
+> El interceptor global de `api.ts` **solo** maneja el `401` (sesión expirada). El `429` fue removido del interceptor para evitar toasts duplicados.
+
+### Modo Fallback del Reporte
+
+Si la IA falla, el backend responde con `200 OK` y un cuerpo Markdown que incluye:
+- **Tabla estática** con las métricas crudas de los sensores (KPIs)
+- **Blockquote `[!WARNING]`** indicando que el análisis IA no estuvo disponible
+
+El componente `MarkdownRenderer.vue` transforma la sintaxis de GitHub Alerts (`> [!WARNING]`, `> [!NOTE]`, `> [!TIP]`, `> [!INFO]`) a bloques visualmente claros con emoji, para que el reporte degradado se renderice correctamente.
+
+### Liberación de Spinners
+
+Todos los bloques `try...catch` que realizan llamadas HTTP utilizan `finally` para garantizar que los estados de carga (`isLoading`, `isSending`, `isGenerating`) se restablezcan, evitando que la interfaz se quede bloqueada.
+
+---
+
 ## 📂 Estructura de Directorios Detallada
 
 ```text
 src/
 ├── components/                     # Componentes UI reutilizables
 │   ├── ApiKeyModal.vue             #   Modal de visualización de API Key generada
+│   ├── MarkdownRenderer.vue        #   Renderizado seguro de Markdown (tablas GFM + GitHub Alerts)
+│   ├── ReportPdfTemplate.vue       #   Template oculto para exportación PDF
 │   ├── SegmentedControl.vue        #   Selector tipo pill (1h / 5h / 24h)
 │   ├── SkeletonCard.vue            #   Placeholder animado de carga
 │   ├── TelemetryCard.vue           #   Tarjeta de métrica con progreso visual
@@ -382,6 +419,7 @@ src/
 └── views/                          # Páginas enrutables (Smart Components)
     ├── LoginPage.vue               #   Formulario de login premium
     ├── RegisterPage.vue            #   Formulario de registro
+    ├── ReportsPage.vue             #   Generador de informes IA (zona + enfoque + rango)
     ├── TabChat.vue                 #   Asistente IA con multi-sesión y markdown
     ├── TabSystem.vue               #   Panel de control del sistema
     ├── TabsPage.vue                #   Layout principal (Sidebar + RouterOutlet + SSE)
