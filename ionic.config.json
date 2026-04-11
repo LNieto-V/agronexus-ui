@@ -1,7 +1,0 @@
-{
-  "name": "agronexus-ui",
-  "integrations": {
-    "capacitor": {}
-  },
-  "type": "vue-vite"
-}

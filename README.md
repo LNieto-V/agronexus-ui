@@ -1,22 +1,24 @@
-# 🌾 AgroNexus AI — Frontend Technical Documentation
+# 🌾 AgroNexus AI — Web Frontend
 
-> **Stack**: Ionic 8 + Vue 3 (Composition API) + Pinia + Axios  
+> **Stack**: Pure Vue 3 (Composition API) + Vite + Pinia + Axios + Lucide Icons  
 > **Backend**: FastAPI DDD-Lite (comunicación exclusiva por API REST + SSE)  
-> **Versión**: 2.6.0 — Abril 2026  
+> **Versión**: 3.0.0 — Abril 2026  
+
+**AgroNexus AI** es la interfaz web de alto rendimiento para el panel de control de agricultura de precisión. Tras un exhaustivo proceso de refactorización (`Pura Web`), se han eliminado por completo las dependencias de Ionic Framework, Capacitor y dependencias móviles nativas para ofrecer una experiencia ultraligera y rápida basada en **Vanilla Vue 3, HTML Semántico y CSS nativo (Glassmorphism + Modo Oscuro)**.
 
 ---
 
 ## 📐 Arquitectura General
 
-El frontend opera como una **SPA (Single Page Application)** desacoplada del backend. Toda la comunicación se realiza a través de un cliente Axios centralizado. No se utiliza el SDK de Supabase en la capa de presentación.
+El frontend opera como una **SPA (Single Page Application)** desacoplada del backend. Toda la comunicación se realiza a través de un cliente Axios centralizado y eventos en tiempo real mediante *Server-Sent Events (SSE)*. No se utiliza el SDK de Supabase en la capa de presentación.
 
 ```mermaid
 graph TB
-    subgraph Frontend["🖥️ Frontend (Ionic + Vue 3)"]
+    subgraph Frontend["🖥️ Frontend (Pure Vue 3)"]
         direction TB
         Router["Router Guard<br/>(Auth Check)"]
         Views["Views<br/>(Pages)"]
-        Components["Components<br/>(UI Reutilizable)"]
+        Components["Base UI<br/>(Componentes Reutilizables)"]
         Composables["Composables<br/>(Lógica de Negocio)"]
         Stores["Pinia Stores<br/>(Estado Global)"]
         Services["API Service<br/>(Axios Singleton)"]
@@ -66,7 +68,7 @@ graph LR
     Login["/login"] -->|on success| Home
     Register["/register"] -->|on success| Home
 
-    subgraph Authenticated["/tabs (requiresAuth)"]
+    subgraph Authenticated["/tabs (Auth)"]
         Home["/tabs/home<br/>WelcomeHome"]
         Dashboard["/tabs/dashboard<br/>TelemetryDashboard"]
         Chat["/tabs/assistant<br/>TabChat"]
@@ -74,10 +76,7 @@ graph LR
         System["/tabs/control<br/>TabSystem"]
     end
 
-    Home --- Dashboard
-    Home --- Chat
-    Home --- Reports
-    Home --- System
+    Home --- Dashboard & Chat & Reports & System
 ```
 
 | Ruta | Vista | Descripción | Guard |
@@ -94,60 +93,9 @@ graph LR
 
 ---
 
-## 🧩 Árbol de Componentes
+## 🏬 Gestión de Estado Centralizado (Pinia)
 
-```mermaid
-graph TD
-    App["App.vue"]
-    App --> TabsPage["TabsPage.vue<br/>(Sidebar + RouterOutlet)"]
-    
-    TabsPage --> WH["WelcomeHome"]
-    TabsPage --> TD["TelemetryDashboard"]
-    TabsPage --> TC["TabChat"]
-    TabsPage --> RP["ReportsPage"]
-    TabsPage --> TS["TabSystem"]
-
-    TD --> TC1["TelemetryCard x5"]
-    TD --> TRC["TrendsChart x4"]
-    TD --> SK["SkeletonCard"]
-    TD --> SEG["SegmentedControl"]
-
-    RP --> MR["MarkdownRenderer"]
-    RP --> RPT["ReportPdfTemplate"]
-
-    TC --> MR2["renderMarkdown (inline)"]
-
-    TS --> MTC["ModeToggleCard"]
-    TS --> EC["EnvironmentControls"]
-    TS --> ASP["ApiSecurityPanel"]
-    TS --> AL["ActivityLog"]
-    TS --> PS["ProfileSettings"]
-    TS --> ZM["ZoneManager (Modal)"]
-
-    ASP --> AKM["ApiKeyModal"]
-```
-
-### Componentes Detallados
-
-| Componente | Ubicación | Responsabilidad |
-|------------|-----------|-----------------|
-| `TelemetryCard` | `components/` | Tarjeta individual de métrica con barra de progreso y unidad |
-| `TrendsChart` | `components/` | Gráfico Chart.js con datos históricos y gradiente |
-| `SkeletonCard` | `components/` | Placeholder animado durante la carga inicial |
-| `SegmentedControl` | `components/` | Selector de rango temporal (1h / 5h / 24h) |
-| `ApiKeyModal` | `components/` | Modal que muestra la API Key generada (una sola vez) |
-| `ModeToggleCard` | `components/system/` | Switch AUTO / MANUAL con persistencia en DB |
-| `EnvironmentControls` | `components/system/` | Controles manuales de actuadores (Bomba, Fan, Luz) |
-| `ApiSecurityPanel` | `components/system/` | Provisionamiento de API Keys con validación por zona |
-| `ActivityLog` | `components/system/` | Historial paginado de acciones de actuadores |
-| `ProfileSettings` | `components/system/` | Edición de nombre y rol del usuario |
-| `ZoneManager` | `components/system/` | CRUD modal para gestionar invernaderos/zonas |
-| `MarkdownRenderer` | `components/` | Renderizado seguro de Markdown con soporte para tablas GFM y GitHub Alerts (`[!WARNING]`, `[!NOTE]`, etc.) |
-| `ReportPdfTemplate` | `components/` | Template HTML oculto para exportación de informes IA a PDF vía `html2pdf` |
-
----
-
-## 🏪 Flujo de Datos (Stores)
+El estado crítico de la aplicación se fragmenta lógicamente en Stores de Pinia que actúan como Single Source of Truth.
 
 ```mermaid
 flowchart LR
@@ -173,86 +121,13 @@ flowchart LR
     CONV -->|sendMessage/getHistory| CS
 ```
 
-### Detalle de cada Store
-
-#### `authStore` — Autenticación
-| Propiedad / Acción | Tipo | Descripción |
-|---------------------|------|-------------|
-| `accessToken` | `string \| null` | JWT almacenado en `localStorage` |
-| `user` | `object \| null` | Metadata del usuario (email, id, rol) |
-| `isAuthenticated` | `computed<boolean>` | Derivado de `!!accessToken` |
-| `signIn(credentials)` | `async` | Login via `POST /auth/login` |
-| `signUp(credentials)` | `async` | Registro via `POST /auth/register` |
-| `signOut()` | `sync` | Limpia token + user + localStorage |
-
-#### `telemetryStore` — Datos de Sensores
-| Propiedad / Acción | Tipo | Descripción |
-|---------------------|------|-------------|
-| `latest` | `TelemetryData \| null` | Última lectura (temp, hum, pH, ec, light) |
-| `history` | `TelemetryData[]` | Historial ordenado cronológicamente para gráficos |
-| `fetchLatest(zoneId?)` | `async` | Obtiene última lectura (filtrada por zona opcionalmente) |
-| `fetchHistory(zoneId?)` | `async` | Obtiene historial completo con mapeo de campos |
-| `updateLatest(data)` | `sync` | Inyecta datos en tiempo real desde SSE |
-
-#### `iotStore` — Infraestructura y Zonas
-| Propiedad / Acción | Tipo | Descripción |
-|---------------------|------|-------------|
-| `zones` | `Zone[]` | Lista de invernaderos/zonas del usuario |
-| `selectedZoneId` | `string \| null` | Zona activa para filtrar telemetría y logs |
-| `actuatorLogs` | `ActuatorLogEntry[]` | Historial paginado de acciones |
-| `createZone(name, crop)` | `async` | `POST /zones/` — Añade zona y actualiza lista |
-| `updateZone(id, name, crop)` | `async` | `PATCH /zones/{id}/` — Edita zona existente |
-| `deleteZone(id)` | `async` | `DELETE /zones/{id}/` — Elimina zona |
-| `fetchActuatorLogs(reset?)` | `async` | Paginación infinita con `logPage` y `logHasMore` |
-
-#### `conversationsStore` — Chat IA Multi-Sesión
-| Propiedad / Acción | Tipo | Descripción |
-|---------------------|------|-------------|
-| `conversations` | `Conversation[]` | Sesiones de chat ordenadas por `updated_at` |
-| `activeConversationId` | `string \| null` | Sesión activa actualmente |
-| `messages` | `ChatMessage[]` | Mensajes de la conversación activa |
-| `sendMessage(text)` | `async` | Envía mensaje, procesa `actions[]` y `alerts[]` |
-
 ---
 
 ## 🔌 Capa de Servicios (`api.ts`)
 
-### Configuración del Cliente
+La configuración del cliente principal aísla toda lógica externa desde un solo origen.
 
-```typescript
-// La URL base SIEMPRE termina en "/" para evitar errores de concatenación
-const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-const finalBaseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl : `${rawBaseUrl}/`;
-const api = axios.create({ baseURL: finalBaseUrl });
-```
-
-### Interceptores
-
-```mermaid
-sequenceDiagram
-    participant Component
-    participant Axios
-    participant Backend
-
-    Component->>Axios: api.get("dashboard/latest")
-    
-    Note over Axios: Request Interceptor<br/>Inyecta Bearer token<br/>desde localStorage
-
-    Axios->>Backend: GET /api/dashboard/latest<br/>Authorization: Bearer xxx
-
-    alt 200 OK
-        Backend-->>Axios: { temperature: 24.5, ... }
-        Axios-->>Component: response.data
-    else 401 Unauthorized
-        Backend-->>Axios: 401
-        Note over Axios: Response Interceptor<br/>1. Llama authStore.signOut()<br/>2. Toast "Session expired"<br/>3. router.push("/login")
-    else 429 Too Many Requests
-        Backend-->>Axios: 429
-        Note over Component: Manejado por cada Store/Vista<br/>Toast contextual + libera spinner
-    end
-```
-
-### Endpoints Disponibles
+### Endpoints Disponibles (REST)
 
 | Servicio | Método | Endpoint | Zona-Aware |
 |----------|--------|----------|:----------:|
@@ -269,7 +144,6 @@ sequenceDiagram
 | `iotService.deleteZone` | `DELETE` | `zones/{id}/` | — |
 | `iotService.getActuatorLog` | `GET` | `dashboard/actuator-log` | ✅ |
 | `systemService.generateApiKey` | `POST` | `auth/keys` | ✅ |
-| `firmware.source` | `N/A` | `firmware/agronexus_esp32c6.ino` | — |
 
 ---
 
@@ -311,16 +185,6 @@ graph TD
 
 ---
 
-## 🛠️ Diagnóstico y Salud del Sistema
-
-La vista `TabSystem.vue` incluye un módulo de diagnóstico avanzado para operarios y desarrolladores:
-
-- **Health Check**: Verifica la conectividad de todos los nodos de la red IoT y el estado del orquestador AI.
-- **Test Telemetry**: Permite inyectar datos sintéticos para validar el comportamiento reactivo de los actuadores y las alertas de la IA sin necesidad de hardware físico.
-- **Heartbeat Monitor**: Indicador visual en tiempo real de la sincronización del sistema (Online/Offline).
-
----
-
 ## 🔄 Flujo de Telemetría en Tiempo Real (SSE)
 
 ```mermaid
@@ -350,149 +214,77 @@ sequenceDiagram
 
 ### Manejo de HTTP 429 (Too Many Requests)
 
-Cuando el backend agota la cuota de la API de IA (Gemini), responde con `429`. El frontend maneja este escenario **en cada punto de consumo** (no en el interceptor global) para ofrecer mensajes contextuales:
-
-| Punto de consumo | Archivo | Comportamiento |
-|---|---|---|
-| Chat IA | `conversationsStore.ts` | Toast warning + burbuja de error en el chat + libera `isSending` |
-| Generación de Reporte | `ReportsPage.vue` | Toast warning + libera `isGenerating` (spinner se detiene) |
-
-> El interceptor global de `api.ts` **solo** maneja el `401` (sesión expirada). El `429` fue removido del interceptor para evitar toasts duplicados.
+Cuando el backend agota la cuota de la API de IA (Gemini), responde con `429`. El frontend maneja este escenario **en cada punto de consumo** para ofrecer mensajes contextuales sin bloquear al usuario, por medio de notificaciones nativas (`AppToast.vue` inyectado mediante Teleport).
 
 ### Modo Fallback del Reporte
 
-Si la IA falla, el backend responde con `200 OK` y un cuerpo Markdown que incluye:
-- **Tabla estática** con las métricas crudas de los sensores (KPIs)
-- **Blockquote `[!WARNING]`** indicando que el análisis IA no estuvo disponible
-
-El componente `MarkdownRenderer.vue` transforma la sintaxis de GitHub Alerts (`> [!WARNING]`, `> [!NOTE]`, `> [!TIP]`, `> [!INFO]`) a bloques visualmente claros con emoji, para que el reporte degradado se renderice correctamente.
-
-### Liberación de Spinners
-
-Todos los bloques `try...catch` que realizan llamadas HTTP utilizan `finally` para garantizar que los estados de carga (`isLoading`, `isSending`, `isGenerating`) se restablezcan, evitando que la interfaz se quede bloqueada.
+Si la IA falla por cuota o latencia tras reintentos, el backend responde con `200 OK` y un cuerpo Markdown de emergencia analítico (fallback modal). El componente web **`MarkdownRenderer.vue`** domina la sintaxis `GitHub Alerts` (`> [!WARNING]`, `> [!NOTE]`) traduciéndolo visualmente a la UI del reporte degenerado.
 
 ---
 
-## 📂 Estructura de Directorios Detallada
+## 📂 Árbol de Directorios 
 
 ```text
 src/
-├── components/                     # Componentes UI reutilizables
-│   ├── ApiKeyModal.vue             #   Modal de visualización de API Key generada
-│   ├── MarkdownRenderer.vue        #   Renderizado seguro de Markdown (tablas GFM + GitHub Alerts)
-│   ├── ReportPdfTemplate.vue       #   Template oculto para exportación PDF
-│   ├── SegmentedControl.vue        #   Selector tipo pill (1h / 5h / 24h)
-│   ├── SkeletonCard.vue            #   Placeholder animado de carga
-│   ├── TelemetryCard.vue           #   Tarjeta de métrica con progreso visual
-│   ├── TrendsChart.vue             #   Gráfico Chart.js con gradiente
-│   └── system/                     #   Sub-módulo de control del sistema
-│       ├── ActivityLog.vue         #     Historial paginado de actuadores
-│       ├── ApiSecurityPanel.vue    #     Panel de generación de API Keys
-│       ├── EnvironmentControls.vue #     Controles manuales (Bomba/Fan/Luz)
-│       ├── ModeToggleCard.vue      #     Switch AUTO ↔ MANUAL
-│       ├── ProfileSettings.vue     #     Edición de perfil de usuario
-│       └── ZoneManager.vue         #     CRUD modal de zonas/invernaderos
+├── components/                     # Micro-UI y componentes modulares
+│   ├── AppModal.vue                #   Ventanas flotantes teletransportadas
+│   ├── AppSelect.vue               #   Drop-downs opacos y blindados ante z-index
+│   ├── AppToast.vue                #   Snackbars / Toasts reactivos
+│   ├── MarkdownRenderer.vue        #   Render seguro de GFM y GitHub Alerts
+│   └── system/                     #   Gestión del entorno IoT 
+│       ├── ApiSecurityPanel.vue    
+│       ├── ZoneManager.vue         
+│       └── ...                     
 │
-├── composables/                    # Lógica de negocio extraída
-│   ├── useActuatorBus.ts           #   Bus reactivo global para acciones de la IA
-│   ├── useSystemControls.ts        #   Lógica de modo, actuadores y generación de keys
-│   ├── useTelemetry.ts             #   Wrapper reactivo (Store to Refs)
-│   └── useTelemetrySSE.ts          #   Conexión SSE con auto-reconnect (5s)
+├── composables/                    # Lógica Vue separada de los templates
+│   ├── useToast.ts                 #   Inyección funcional de Toasts
+│   ├── useModal.ts                 #   Orquestación de `<AppModal>`
+│   └── useTelemetrySSE.ts          #   Worker nativo con Server Sent Events
 │
-├── router/
-│   └── index.ts                    # Definición de rutas + beforeEach guard
+├── services/                       # Conectividad remota
+│   └── api.ts                      #   Instancia maestra de Axios
 │
-├── services/
-│   └── api.ts                      # Axios singleton + interceptores + todos los servicios
-│
-├── stores/                         # Estado global (Pinia Composition API)
-│   ├── auth.ts                     #   JWT, login, logout, profile
-│   ├── conversationsStore.ts       #   Sesiones de chat + mensajes + envío
-│   ├── iotStore.ts                 #   Zonas, logs de actuadores, selección
-│   ├── system.ts                   #   Modo del sistema (AUTO/MANUAL)
-│   └── telemetry.ts                #   Datos de sensores (latest + history)
+├── stores/                         # Pinia state managers
+│   ├── auth.ts                     
+│   ├── iotStore.ts                 
+│   └── ...                         
 │
 ├── theme/
-│   └── variables.css               # AG-Design Tokens (colores, radii, spacing)
+│   └── variables.css               # Diseño de sistema Premium Dark-Emerald
 │
-├── types/
-│   └── index.ts                    # Interfaces TypeScript del dominio completo
-│
-└── views/                          # Páginas enrutables (Smart Components)
-    ├── LoginPage.vue               #   Formulario de login premium
-    ├── RegisterPage.vue            #   Formulario de registro
-    ├── ReportsPage.vue             #   Generador de informes IA (zona + enfoque + rango)
-    ├── TabChat.vue                 #   Asistente IA con multi-sesión y markdown
-    ├── TabSystem.vue               #   Panel de control del sistema
-    ├── TabsPage.vue                #   Layout principal (Sidebar + RouterOutlet + SSE)
-    ├── TelemetryDashboard.vue      #   Dashboard con gráficos y filtro por zona
-    └── WelcomeHome.vue             #   Landing con resumen de métricas
+└── views/                          # Páginas maestras con Vue Router
+    ├── TabChat.vue                 #   Orquestación del chat RAG
+    ├── ReportsPage.vue             
+    └── ...                         
 ```
 
 ---
 
 ## 🧪 Estrategia de Testing
 
-El frontend cuenta con una suite completa de pruebas automatizadas que garantizan la estabilidad de los flujos críticos. Se han implementado **19 tests** verificados que cubren lógica de negocio, UI y flujos de usuario.
+El frontend mantiene pruebas asiladas utilizando el estándar de **Vitest** comprobando que la UI actúe conforme a los contratos pre-definidos:
 
-### 1. Niveles de Prueba
+*   **Unit Testing**: Implementado con `@vue/test-utils` para garantizar simulaciones reactivas del comportamiento (Ej. `TelemetryCard.spec.ts`).
+*   **Mocks**: Aislamiento independiente. Las consultas en tests no corren directamente con Axios sino a través de objetos ES Simulados.
 
-| Nivel | Herramienta | Alcance | Ubicación |
-|-------|------------|---------|-----------|
-| **Unit Testing** | `vitest` | Lógica de Stores (Pinia), servicios y utilidades | `tests/unit/*.spec.ts` |
-| **Component Testing**| `vue-test-utils` | Renderizado reactivo, props y eventos de UI | `tests/unit/components/` |
-| **E2E Testing** | `cypress` | Flujos completos (Login -> Dashboard -> Gestión) | `tests/e2e/specs/` |
+```bash
+npm run test:unit
+```
 
-### 2. Cobertura Crítica
-- **Auth**: Validación de persistencia de JWT, logout reactivo y protección de rutas.
-- **Telemetría**: Mapeo correcto de datos de sensores y balanceo de carga en gráficos.
-- **IoT/Zonas**: Ciclo de vida completo de infraestructura y paginación infinita de logs técnicos.
+### Entorno y Ejecución
 
-### 3. Entorno y Mocks
-- **Mocks Globales**: Ubicados en `tests/unit/setup.ts`. Mockean `axios`, `localStorage` y controladores de Ionic.
-- **Aislamiento**: Los tests unitarios no dependen de una API real; utilizan `vi.spyOn` y `vi.mocked` para simular respuestas de red.
-- **Configuración Vite**: Soporte para ESM en Ionic Core inyectado vía `server.deps.inline` en `vite.config.ts`.
+Rellena tu archivo `.env.local` con las variables críticas listadas en su respectivo `.env.example`:
 
----
+| Variable | Descripción |
+|----------|-------------|
+| `VITE_API_BASE_URL` | URL base de la API FastAPI. **Debe incluir `/api`** |
 
-## ⚙️ Variables de Entorno
+Para ejecutar localmente el cliente nativo:
 
-| Variable | Valor por defecto | Descripción |
-|----------|-------------------|-------------|
-| `VITE_API_BASE_URL` | `http://localhost:8000/api` | URL base de la API FastAPI. **Debe incluir `/api`** |
-| `VITE_SUPABASE_URL` | — | (Legacy) URL del proyecto Supabase |
-| `VITE_SUPABASE_ANON_KEY` | — | (Legacy) Clave anónima de Supabase |
+```bash
+# Servidor de UI ultrarrápido
+npm run dev
 
----
-
-## 🚀 Comandos
-
-| Comando | Descripción |
-|---------|-------------|
-| `npm run dev` | Servidor de desarrollo Vite (HMR) |
-| `npm run build` | `vue-tsc` + bundle de producción en `/dist` |
-| `npm run preview` | Preview del bundle de producción |
-| `npm run lint` | Linting con ESLint |
-| `npm run test:unit` | Tests unitarios con Vitest |
-| `npm run test:e2e` | Tests E2E con Cypress |
-| `npx cap sync` | Sincroniza código web con Capacitor (iOS/Android) |
-
----
-
-## 📦 Dependencias Principales
-
-| Paquete | Versión | Propósito |
-|---------|---------|-----------|
-| `vue` | ^3.3.0 | Framework reactivo core |
-| `@ionic/vue` | ^8.0.0 | Componentes nativos mobile-ready |
-| `pinia` | ^3.0.4 | Estado global con Composition API |
-| `axios` | ^1.14.0 | Cliente HTTP (único punto de comunicación) |
-| `chart.js` + `vue-chartjs` | ^4.5 / ^5.3 | Gráficos de tendencias históricas |
-| `marked` + `dompurify` | ^17 / ^3.3 | Renderizado seguro de markdown en el chat |
-| `ionicons` | ^7.0.0 | Iconografía del sistema |
-| `@capacitor/core` | 8.3.0 | Bridge nativo para iOS/Android |
-
----
-
-> [!IMPORTANT]
-> **Regla de Oro**: Nunca importes `supabase` directamente en componentes o stores. Toda comunicación con el backend debe pasar por `src/services/api.ts`. El SDK de Supabase solo se mantiene como dependencia legacy para compatibilidad con Capacitor Auth.
+# Bundle para hosting
+npm run build
+```

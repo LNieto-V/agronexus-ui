@@ -1,327 +1,240 @@
 <script setup lang="ts">
-import { 
-  IonPage, IonHeader, IonToolbar, IonTitle, IonContent,
-  IonButtons, IonButton, IonIcon, IonMenuButton,
-  IonSelect, IonSelectOption, IonSpinner, toastController
-} from '@ionic/vue';
-import { 
-  thermometerOutline, waterOutline, flaskOutline, leafOutline, 
-  refreshOutline, warningOutline, sunnyOutline, downloadOutline,
-  sparklesOutline, documentTextOutline
-} from 'ionicons/icons';
-import { onMounted, computed, shallowRef, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useTelemetryStore } from '@/stores/telemetry';
-import { useTelemetry } from '@/composables/useTelemetry';
+import { useIotStore } from '@/stores/iotStore';
+import { BarChart2, RefreshCw, Download, Droplets, Thermometer, Zap, Wind } from 'lucide-vue-next';
 import TelemetryCard from '@/components/TelemetryCard.vue';
 import TrendsChart from '@/components/TrendsChart.vue';
 import SkeletonCard from '@/components/SkeletonCard.vue';
 import SegmentedControl from '@/components/SegmentedControl.vue';
-import { useIotStore } from '@/stores/iotStore';
-import { useConversationsStore } from '@/stores/conversationsStore';
-import { useRouter } from 'vue-router';
-import { dashboardService } from '@/services/api';
+import AppSelect from '@/components/AppSelect.vue';
+import AppSpinner from '@/components/AppSpinner.vue';
 
-import { useActuatorBus } from '@/composables/useActuatorBus';
-import type { TelemetryKey } from '@/types';
-
-const store = useTelemetryStore();
+const telemetryStore = useTelemetryStore();
 const iotStore = useIotStore();
-const chatStore = useConversationsStore();
-const router = useRouter();
-const { latest, loading, history } = useTelemetry();
-const { pendingActions } = useActuatorBus();
-const timeRange = shallowRef('5h');
-const isExporting = shallowRef(false);
 
-const isBombaActive = computed(() =>
-  pendingActions.value.some(a => (a.device === 'BOMBA' || a.device === 'WATER') && a.action === 'ON')
-);
-
-const isVentiladorActive = computed(() =>
-  pendingActions.value.some(a => (a.device === 'VENTILADOR' || a.device === 'FAN') && a.action === 'ON')
-);
-
-const getChartHistory = (key: TelemetryKey) => {
-  return history.value.map(h => ({
-    timestamp: h.timestamp,
-    value: h[key] as number
-  }));
-};
-
-const hasAlerts = computed(() => {
-  const ph = latest.value?.ph ?? 0;
-  const temp = latest.value?.temperature ?? 0;
-  return ph > 7.5 || ph < 5.5 || temp > 28;
-});
-
-const calcProgress = (val: number | undefined, min: number, max: number) => {
-  if (val === undefined) return 0;
-  return Math.min(100, Math.max(0, ((val - min) / (max - min)) * 100));
-};
-
-const refreshData = async () => {
-  await Promise.all([
-    store.fetchLatest(iotStore.selectedZoneId), 
-    store.fetchHistory(iotStore.selectedZoneId)
-  ]);
-};
-
-async function handleExport() {
-  isExporting.value = true;
-  try {
-    const response = await dashboardService.exportHistory();
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `agronexus_report_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    const toast = await toastController.create({
-      message: 'Download started successfully',
-      duration: 2000,
-      color: 'success',
-      position: 'bottom'
-    });
-    await toast.present();
-  } catch (error) {
-    const toast = await toastController.create({
-      message: 'Export failed. Please try again.',
-      duration: 3000,
-      color: 'danger',
-      position: 'bottom'
-    });
-    await toast.present();
-  } finally {
-    isExporting.value = false;
-  }
-}
-
-
-watch(() => iotStore.selectedZoneId, () => {
-  refreshData();
-});
+const chartView = ref('Temperatura');
+const chartOptions = ['Temperatura', 'Humedad', 'pH', 'EC', 'CO₂'];
 
 onMounted(() => {
-  refreshData();
+  telemetryStore.fetchLatest(iotStore.selectedZoneId);
+  telemetryStore.fetchHistory(iotStore.selectedZoneId);
   iotStore.fetchZones();
 });
+
+watch(() => iotStore.selectedZoneId, () => {
+  telemetryStore.fetchLatest(iotStore.selectedZoneId);
+  telemetryStore.fetchHistory(iotStore.selectedZoneId);
+});
+
+const cards = computed(() => {
+  const d = telemetryStore.latest;
+  if (!d) return [];
+  return [
+    {
+      label: 'Temperature', value: d.temperature ?? '--', unit: '°C',
+      icon: Thermometer, color: 'red',
+      progress: d.temperature ? Math.min((d.temperature / 40) * 100, 100) : 0
+    },
+    {
+      label: 'Humidity', value: d.humidity ?? '--', unit: '%',
+      icon: Droplets, color: 'blue',
+      progress: d.humidity ?? 0
+    },
+    {
+      label: 'pH Level', value: d.ph ?? '--', unit: 'pH',
+      icon: BarChart2, color: 'purple',
+      progress: d.ph ? (d.ph / 14) * 100 : 0
+    },
+    {
+      label: 'Conductivity', value: d.ec ?? '--', unit: 'mS/cm',
+      icon: Zap, color: 'yellow',
+      progress: d.ec ? Math.min((d.ec / 4) * 100, 100) : 0
+    },
+    {
+      label: 'CO₂', value: d.co2 ?? '--', unit: 'ppm',
+      icon: Wind, color: 'primary',
+      progress: d.co2 ? Math.min((d.co2 / 2000) * 100, 100) : 0
+    },
+  ];
+});
+
+const chartData = computed(() => {
+  const h = telemetryStore.history;
+  if (!h || h.length === 0) return [];
+  const map: Record<string, keyof typeof h[0]> = {
+    'Temperatura': 'temperature',
+    'Humedad': 'humidity',
+    'pH': 'ph',
+    'EC': 'ec',
+    'CO₂': 'co2',
+  };
+  const key = map[chartView.value] as string;
+  return h.map((d: any) => ({ timestamp: d.timestamp, value: d[key] }));
+});
+
+const chartColorMap: Record<string, string> = {
+  'Temperatura': '239, 68, 68',
+  'Humedad': '59, 130, 246',
+  'pH': '139, 92, 246',
+  'EC': '245, 158, 11',
+  'CO₂': '16, 185, 129',
+};
+
+const chartUnit: Record<string, string> = {
+  'Temperatura': '°C', 'Humedad': '%', 'pH': 'pH',
+  'EC': 'mS/cm', 'CO₂': 'ppm',
+};
+
+async function refreshData() {
+  await Promise.all([
+    telemetryStore.fetchLatest(iotStore.selectedZoneId),
+    telemetryStore.fetchHistory(iotStore.selectedZoneId),
+  ]);
+}
+
+async function exportHistory() {
+  try {
+    const { dashboardService } = await import('@/services/api');
+    const response = await dashboardService.exportHistory();
+    const url = URL.createObjectURL(response.data);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `agronexus_history_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Export failed', err);
+  }
+}
 </script>
 
 <template>
-  <ion-page>
-    <ion-header class="ion-no-border">
-      <ion-toolbar class="premium-toolbar px-4 py-2">
-        <ion-buttons slot="start">
-          <ion-menu-button color="primary"></ion-menu-button>
-        </ion-buttons>
-        <ion-title class="font-bold text-lg">Telemetry Dashboard</ion-title>
-        <ion-buttons slot="end">
-          <ion-button @click="refreshData" shape="round">
-            <ion-icon :icon="refreshOutline" :class="{ 'anim-spin': loading }" />
-          </ion-button>
-        </ion-buttons>
-      </ion-toolbar>
-    </ion-header>
+  <div class="page-scroll">
+    <div class="ag-container py-6 md:py-10">
 
-    <ion-content :fullscreen="true">
-      <div class="ag-container py-6">
-        <!-- Header Section -->
-        <div class="ag-flex-col md:ag-flex-row md:justify-between items-start md:items-center gap-4 mb-8">
-          <div>
-            <h2 class="text-2xl md:text-3xl font-bold tracking-tight mb-1">Overview</h2>
-            <div class="ag-flex-row gap-2">
-              <span class="status-dot bg-primary"></span>
-              <p class="text-sm font-medium text-muted">System Online &bull; Live Sensors</p>
-            </div>
-            <div class="actuators-status ag-flex-row ag-flex-wrap gap-2 mt-3">
-              <div class="actuator-badge" :class="{ 'pulse-green': isBombaActive }">
-                <ion-icon :icon="waterOutline" />
-                <span>Pump</span>
-              </div>
-              <div class="actuator-badge" :class="{ 'pulse-green': isVentiladorActive }">
-                <ion-icon :icon="leafOutline" />
-                <span>Fan</span>
-              </div>
-            </div>
-          </div>
-          <div class="ag-flex-row ag-flex-wrap gap-3 mt-4 md:mt-0 items-center">
-            <div class="zone-selector-wrapper flex-grow md:flex-grow-0 items-center flex">
-              <ion-select 
-                v-model="iotStore.selectedZoneId" 
-                placeholder="All Greenhouse Zones"
-                interface="popover"
-                class="premium-select w-full"
-              >
-                <ion-select-option :value="null">All Greenhouse Zones</ion-select-option>
-                <ion-select-option 
-                  v-for="zone in iotStore.zones" 
-                  :key="zone.id" 
-                  :value="zone.id"
-                >
-                  {{ zone.name }}
-                </ion-select-option>
-              </ion-select>
-            </div>
-            <SegmentedControl v-model="timeRange" :options="['1h', '5h', '24h']" class="flex-grow md:flex-grow-0" />
-          </div>
+      <!-- Header -->
+      <div class="page-header mb-8">
+        <div>
+          <h1 class="text-2xl md:text-3xl font-bold tracking-tight">Live Telemetry</h1>
+          <p class="text-muted mt-1 text-sm md:text-base">Real-time greenhouse sensor data</p>
         </div>
-
-        <!-- Environmental Section -->
-        <div class="section-container mb-8">
-          <h3 class="section-title text-sm font-bold uppercase tracking-wider text-muted mb-4 ag-flex-row gap-2">
-            <ion-icon :icon="leafOutline" class="text-primary" />
-            Environmental Clima
-          </h3>
-          <div v-if="loading && !latest" class="ag-grid sm:ag-grid-2 md:ag-grid-3 lg:ag-desktop-grid-5">
-            <SkeletonCard v-for="i in 4" :key="i" />
-          </div>
-          <div v-else class="ag-grid sm:ag-grid-2 md:ag-grid-3 lg:ag-desktop-grid-5" :class="{ 'refreshing': loading }">
-            <TelemetryCard label="Air Temp" :value="latest?.temperature ?? '--'" unit="°C" :icon="thermometerOutline" color="red" :progress="calcProgress(latest?.temperature, 0, 40)" />
-            <TelemetryCard label="Air Humidity" :value="latest?.humidity ?? '--'" unit="%" :icon="waterOutline" color="blue" :progress="latest?.humidity ?? 0" />
-            <TelemetryCard v-if="latest?.vpd !== undefined" label="VPD (Health)" :value="latest?.vpd" unit="kPa" :icon="flaskOutline" :color="latest?.vpd > 1.2 ? 'red' : (latest?.vpd > 0.8 ? 'yellow' : 'primary')" :progress="calcProgress(latest?.vpd, 0, 2)" />
-            <TelemetryCard v-if="latest?.co2 !== undefined" label="CO2 Level" :value="latest?.co2" unit="ppm" :icon="leafOutline" color="primary" :progress="calcProgress(latest?.co2, 400, 1500)" />
-            <TelemetryCard label="Light" :value="latest?.light ?? '--'" unit="lux" :icon="sunnyOutline" color="yellow" :progress="calcProgress(latest?.light, 0, 1000)" />
-          </div>
-        </div>
-
-        <!-- Substrate Section -->
-        <div v-if="latest?.soil_temperature !== undefined || latest?.soil_moisture !== undefined || latest?.ph || latest?.ec" class="section-container mb-8">
-          <h3 class="section-title text-sm font-bold uppercase tracking-wider text-muted mb-4 ag-flex-row gap-2">
-            <ion-icon :icon="thermometerOutline" class="text-primary" />
-            Soil & Substrate
-          </h3>
-          <div class="ag-grid sm:ag-grid-2 md:ag-grid-4" :class="{ 'refreshing': loading }">
-            <TelemetryCard v-if="latest?.soil_temperature !== undefined" label="Soil Temp" :value="latest?.soil_temperature" unit="°C" :icon="thermometerOutline" color="orange" :progress="calcProgress(latest?.soil_temperature, 0, 40)" />
-            <TelemetryCard v-if="latest?.soil_moisture !== undefined" label="Soil Moisture" :value="latest?.soil_moisture" unit="%" :icon="waterOutline" color="blue" :progress="latest?.soil_moisture" />
-            <TelemetryCard label="pH Level" :value="latest?.ph ?? '--'" unit="pH" :icon="flaskOutline" color="purple" :progress="calcProgress(latest?.ph, 0, 14)" />
-            <TelemetryCard label="EC Nutrients" :value="latest?.ec ?? '--'" unit="mS/cm" :icon="leafOutline" color="primary" :progress="calcProgress(latest?.ec, 0, 5)" />
-          </div>
-        </div>
-
-        <!-- Resources Section -->
-        <div v-if="latest?.tank_level !== undefined" class="section-container mb-8">
-          <h3 class="section-title text-sm font-bold uppercase tracking-wider text-muted mb-4 ag-flex-row gap-2">
-            <ion-icon :icon="waterOutline" class="text-primary" />
-            Infrastructure Resources
-          </h3>
-          <div class="ag-grid sm:ag-grid-2 md:ag-grid-4" :class="{ 'refreshing': loading }">
-            <TelemetryCard v-if="latest?.tank_level !== undefined" label="Tank Level" :value="latest?.tank_level" unit="%" :icon="waterOutline" :color="latest?.tank_level < 20 ? 'red' : 'blue'" :progress="latest?.tank_level" />
-          </div>
-        </div>
-
-        <!-- Trends Section -->
-        <div class="mb-8">
-          <h3 class="text-lg font-semibold mb-4">Historical Analytics</h3>
-          <div class="ag-grid ag-grid-1 md:ag-grid-2">
-            <TrendsChart :data="getChartHistory('ec')" label="EC Trend" color="16, 185, 129" unit="mS/cm" :loading="loading && history.length === 0" />
-            <TrendsChart :data="getChartHistory('ph')" label="Acidity Profile" color="139, 92, 246" unit="pH" :loading="loading && history.length === 0" />
-            <TrendsChart :data="getChartHistory('temperature')" label="Temperature" color="239, 68, 68" unit="°C" :loading="loading && history.length === 0" />
-            <TrendsChart :data="getChartHistory('humidity')" label="Humidity" color="59, 130, 246" unit="%" :loading="loading && history.length === 0" />
-          </div>
-        </div>
-
-        <!-- Reports & Analytics Section -->
-        <div class="section-container mb-12">
-          <h3 class="section-title text-sm font-bold uppercase tracking-wider text-muted mb-4 ag-flex-row gap-2">
-            <ion-icon :icon="documentTextOutline" class="text-primary" />
-            Reportes & Análisis
-          </h3>
-          <div class="ag-grid ag-grid-1 md:ag-grid-2 gap-4">
-            <!-- CSV Export Card -->
-            <div class="ag-card ag-glass p-5 md:p-6 ag-flex-row ag-flex-wrap ag-flex-between items-center group hover:border-primary/30 transition-all cursor-pointer" @click="handleExport">
-              <div class="ag-flex-row ag-flex-wrap gap-4">
-                <div class="ag-icon-box bg-blue-soft text-blue">
-                  <ion-icon :icon="downloadOutline" />
-                </div>
-                <div>
-                  <p class="font-bold text-lg">Descargar Historial</p>
-                  <p class="text-sm text-muted">Obtén toda la telemetría en formato CSV</p>
-                </div>
-              </div>
-              <ion-spinner v-if="isExporting" name="crescent" color="primary" />
-            </div>
-
-            <!-- AI Health Report Card -->
-            <div class="ag-card ag-glass p-5 md:p-6 ag-flex-row ag-flex-wrap ag-flex-between items-center group hover:border-primary/50 transition-all cursor-pointer" @click="router.push('/tabs/reports')">
-              <div class="ag-flex-row ag-flex-wrap gap-4">
-                <div class="ag-icon-box bg-primary-soft text-primary">
-                  <ion-icon :icon="sparklesOutline" />
-                </div>
-                <div>
-                  <p class="font-bold text-lg">Asesor Agronómico Digital</p>
-                  <p class="text-sm text-muted">Análisis basado en IA de tendencias y salud del cultivo</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Alerts -->
-        <div v-if="hasAlerts" class="ag-card ag-glass alert-card p-4 ag-flex-row gap-4">
-          <div class="ag-icon-box bg-red-soft text-red">
-            <ion-icon :icon="warningOutline" class="text-xl" />
-          </div>
-          <div>
-            <p class="font-bold text-base">System Alert</p>
-            <p class="text-sm text-muted mt-1">A metric threshold has been exceeded. Please review the AI Assistant logs for recommendations.</p>
-          </div>
+        <div class="ag-flex-row gap-3">
+          <AppSelect
+            v-model="iotStore.selectedZoneId"
+            :options="[{ value: null, label: 'All Zones' }, ...iotStore.zones.map(z => ({ value: z.id, label: z.name }))]"
+            placeholder="All Zones"
+            class="zone-select"
+          />
+          <button id="refresh-data-btn" class="icon-btn" @click="refreshData" title="Refresh">
+            <RefreshCw :size="18" :class="{ 'spin': telemetryStore.loading }" />
+          </button>
+          <button id="export-data-btn" class="icon-btn" @click="exportHistory" title="Export CSV">
+            <Download :size="18" />
+          </button>
         </div>
       </div>
-    </ion-content>
-  </ion-page>
+
+      <!-- Metric Cards -->
+      <div class="cards-loading" v-if="telemetryStore.loading && !telemetryStore.latest">
+        <SkeletonCard v-for="i in 5" :key="i" />
+      </div>
+
+      <div v-else class="metrics-grid mb-10">
+        <TelemetryCard
+          v-for="card in cards"
+          :key="card.label"
+          :label="card.label"
+          :value="card.value"
+          :unit="card.unit"
+          :icon="card.icon"
+          :color="card.color"
+          :progress="card.progress"
+        />
+      </div>
+
+      <!-- Chart Section -->
+      <div class="chart-section">
+        <div class="ag-flex-between mb-6 flex-wrap gap-4">
+          <div>
+            <h2 class="font-bold text-lg">Trend Analysis</h2>
+            <p class="text-xs text-muted mt-1">Historical data over time</p>
+          </div>
+          <SegmentedControl
+            :options="chartOptions"
+            v-model="chartView"
+          />
+        </div>
+
+        <TrendsChart
+          :data="chartData"
+          :label="chartView"
+          :color="chartColorMap[chartView]"
+          :unit="chartUnit[chartView]"
+          :loading="telemetryStore.loading && telemetryStore.history.length === 0"
+        />
+      </div>
+
+    </div>
+  </div>
 </template>
 
 <style scoped>
-.anim-spin { animation: spin 1s linear infinite; }
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  display: inline-block;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+.page-scroll {
+  height: 100%;
+  overflow-y: auto;
+  background: var(--ag-bg);
 }
 
-.alert-card {
-  border-left: 4px solid var(--ag-red);
-}
-
-.refreshing {
-  opacity: 0.5;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-}
-
-.actuator-badge {
+.page-header {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.35rem 0.75rem;
-  background: var(--ag-card);
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.zone-select { min-width: 160px; }
+
+.icon-btn {
+  background: rgba(255,255,255,0.04);
   border: 1px solid var(--ag-border);
-  border-radius: 99px;
-  font-size: 0.75rem;
-  font-weight: 700;
+  border-radius: 10px;
   color: var(--ag-text-muted);
-  transition: all 0.3s ease;
+  cursor: pointer;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
 }
 
-.actuator-badge ion-icon {
-  font-size: 0.9rem;
+.icon-btn:hover { background: rgba(255,255,255,0.08); color: var(--ag-text); }
+
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.cards-loading {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 2.5rem;
 }
 
-@keyframes pulseGreen {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
-  50% { box-shadow: 0 0 0 12px rgba(34, 197, 94, 0.3); }
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
 }
 
-.pulse-green {
-  animation: pulseGreen 1s ease-in-out infinite;
-  border-color: #22c55e !important;
-  color: #22c55e !important;
-  background: rgba(34, 197, 94, 0.1) !important;
+@media (min-width: 640px) {
+  .metrics-grid { grid-template-columns: repeat(3, 1fr); }
 }
+
+@media (min-width: 1024px) {
+  .metrics-grid { grid-template-columns: repeat(5, 1fr); }
+}
+
+.chart-section { margin-bottom: 2rem; }
+.flex-wrap { flex-wrap: wrap; }
 </style>

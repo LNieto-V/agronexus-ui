@@ -1,9 +1,9 @@
-import { createRouter, createWebHistory } from '@ionic/vue-router';
-import { RouteRecordRaw } from 'vue-router';
+import { createRouter, createWebHistory } from 'vue-router';
+import type { RouteRecordRaw } from 'vue-router';
 import TabsPage from '../views/TabsPage.vue';
 import { useAuthStore } from '@/stores/auth';
 
-const routes: Array<RouteRecordRaw> = [
+const routes: RouteRecordRaw[] = [
   {
     path: '/',
     redirect: '/tabs/home'
@@ -46,6 +46,10 @@ const routes: Array<RouteRecordRaw> = [
         component: () => import('@/views/ReportsPage.vue')
       }
     ]
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/tabs/home'
   }
 ]
 
@@ -56,14 +60,13 @@ const router = createRouter({
 
 router.beforeEach(async (to) => {
   const authStore = useAuthStore();
-  
-  // Ensure auth is initialized
+
   if (!authStore.initialized) {
     await authStore.initialize();
   }
 
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
-  
+
   if (requiresAuth && !authStore.isAuthenticated) {
     return '/login';
   }
@@ -75,11 +78,4 @@ router.beforeEach(async (to) => {
   return true;
 });
 
-// Fallback route for unknown paths
-routes.push({
-  path: '/:pathMatch(.*)*',
-  redirect: '/tabs/home'
-});
-
-
-export default router
+export default router;

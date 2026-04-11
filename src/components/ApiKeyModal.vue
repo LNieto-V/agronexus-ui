@@ -1,78 +1,76 @@
 <script setup lang="ts">
-import { IonIcon, IonButton, modalController, toastController } from '@ionic/vue';
-import { keyOutline, copyOutline, checkmarkOutline, warningOutline } from 'ionicons/icons';
 import { shallowRef } from 'vue';
-import { Clipboard } from '@capacitor/clipboard';
+import { Key, Copy, Check, AlertTriangle } from 'lucide-vue-next';
+import { useToast } from '@/composables/useToast';
+import { useModal } from '@/composables/useModal';
 
 const props = defineProps<{
   apiKey: string;
 }>();
 
+const emit = defineEmits<{ close: [] }>();
+
 const copied = shallowRef(false);
+const { showToast } = useToast();
+const { closeModal } = useModal();
 
 const copyKey = async () => {
   try {
-    await Clipboard.write({ string: props.apiKey });
+    await navigator.clipboard.writeText(props.apiKey);
     copied.value = true;
-    const toast = await toastController.create({
-      message: 'Key copied to clipboard!',
-      duration: 2000,
-      color: 'success',
-      position: 'bottom'
-    });
-    await toast.present();
+    showToast('Key copied to clipboard!', 'success', 2000);
     setTimeout(() => { copied.value = false; }, 2000);
-  } catch (err) {
-    const toast = await toastController.create({
-      message: 'Failed to copy key',
-      duration: 2000,
-      color: 'danger',
-    });
-    await toast.present();
+  } catch {
+    showToast('Failed to copy key', 'danger', 2000);
   }
 };
 
-const close = () => { modalController.dismiss(); };
+const close = () => {
+  emit('close');
+  closeModal();
+};
 </script>
 
 <template>
   <div class="modal-wrapper p-6">
     <div class="text-center mb-6">
       <div class="icon-circle mx-auto mb-4">
-        <ion-icon :icon="keyOutline" class="text-3xl text-primary" />
+        <Key :size="28" class="text-primary" />
       </div>
       <h2 class="text-2xl font-bold">API Key Generated</h2>
       <p class="text-sm text-muted mt-2">
-        This is the only time you'll see this master key. <strong>Copy it and burn it into your ESP32.</strong>
+        This is the only time you'll see this master key.
+        <strong>Copy it and burn it into your ESP32.</strong>
       </p>
     </div>
 
     <div class="key-display ag-card p-4 mb-6 ag-flex-between">
-      <code class="text-primary font-mono break-all">{{ apiKey }}</code>
-      <ion-button fill="clear" @click="copyKey" class="copy-btn">
-        <ion-icon :icon="copied ? checkmarkOutline : copyOutline" slot="icon-only" />
-      </ion-button>
+      <code class="text-primary font-mono break-all text-sm">{{ apiKey }}</code>
+      <button class="copy-btn" @click="copyKey" :title="copied ? 'Copied!' : 'Copy'">
+        <Check v-if="copied" :size="18" class="text-primary" />
+        <Copy v-else :size="18" />
+      </button>
     </div>
 
-    <div class="ag-alert mb-8 p-4 rounded-xl">
+    <div class="ag-alert mb-6 p-4 rounded-xl">
       <div class="ag-flex-row gap-3">
-        <ion-icon :icon="warningOutline" class="text-yellow text-xl" />
+        <AlertTriangle :size="18" class="text-yellow flex-shrink-0 mt-0.5" />
         <p class="text-xs text-muted leading-relaxed">
-          This key grants direct access to your greenhouse telemetry. Guard it like your harvest — never share it or commit it to version control.
+          This key grants direct access to your greenhouse telemetry. Guard it like your harvest
+          — never share it or commit it to version control.
         </p>
       </div>
     </div>
 
-    <ion-button expand="block" class="premium-btn" @click="close">
+    <button id="api-key-close-btn" class="premium-btn w-full" @click="close">
       I've Saved It
-    </ion-button>
+    </button>
   </div>
 </template>
 
 <style scoped>
 .modal-wrapper {
-  background: var(--ag-card-bg);
-  color: white;
+  color: var(--ag-text);
 }
 
 .icon-circle {
@@ -88,19 +86,50 @@ const close = () => { modalController.dismiss(); };
 .key-display {
   background: rgba(0, 0, 0, 0.3);
   border: 1px dashed var(--ag-border);
+  gap: 0.75rem;
 }
 
-.copy-btn { --color: var(--ag-primary); }
+.copy-btn {
+  background: transparent;
+  border: none;
+  color: var(--ag-text-muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+
+.copy-btn:hover { color: var(--ag-primary); }
 
 .ag-alert {
-  border: 1px solid rgba(255, 183, 77, 0.2);
-  background: rgba(255, 183, 77, 0.05);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  background: rgba(245, 158, 11, 0.05);
 }
 
+.text-yellow { color: var(--ag-yellow); }
+
 .premium-btn {
-  --background: var(--ag-primary);
-  --border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   height: 52px;
+  background: var(--ag-primary);
+  border: none;
+  border-radius: 12px;
+  color: white;
   font-weight: 700;
+  font-size: 1rem;
+  font-family: var(--ag-font);
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
+
+.premium-btn:hover { background: var(--ag-primary-hover); }
+
+.w-full { width: 100%; }
+.mx-auto { margin-left: auto; margin-right: auto; }
+.flex-shrink-0 { flex-shrink: 0; }
+.mt-0-5 { margin-top: 0.125rem; }
 </style>

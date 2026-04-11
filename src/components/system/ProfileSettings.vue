@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { 
-  IonItem, IonLabel, IonInput, IonButton, 
-  IonIcon, IonSpinner, toastController 
-} from '@ionic/vue';
-import { personOutline, saveOutline, checkmarkCircleOutline } from 'ionicons/icons';
+import { User, Save, CheckCircle } from 'lucide-vue-next';
 import { useAuthStore } from '@/stores/auth';
+import { useToast } from '@/composables/useToast';
+import AppSpinner from '@/components/AppSpinner.vue';
 
 const authStore = useAuthStore();
+const { showToast } = useToast();
 const displayName = ref('');
 const loading = ref(false);
 
@@ -18,25 +17,12 @@ onMounted(() => {
 
 async function handleSave() {
   if (!displayName.value.trim()) return;
-  
   loading.value = true;
   try {
     await authStore.updateProfile({ display_name: displayName.value });
-    const toast = await toastController.create({
-      message: '¡Perfil actualizado con éxito!',
-      duration: 2000,
-      color: 'success',
-      position: 'bottom'
-    });
-    await toast.present();
+    showToast('¡Perfil actualizado con éxito!', 'success', 2000);
   } catch (error: any) {
-    const toast = await toastController.create({
-      message: error.message || 'Error al actualizar el perfil',
-      duration: 3000,
-      color: 'danger',
-      position: 'bottom'
-    });
-    await toast.present();
+    showToast(error.message || 'Error al actualizar el perfil', 'danger', 3000);
   } finally {
     loading.value = false;
   }
@@ -45,9 +31,9 @@ async function handleSave() {
 
 <template>
   <div class="ag-card ag-glass p-6">
-    <div class="flex items-center gap-3 mb-6">
+    <div class="ag-flex-row gap-3 mb-6">
       <div class="ag-icon-box bg-primary-soft text-primary">
-        <ion-icon :icon="personOutline" />
+        <User :size="18" />
       </div>
       <div>
         <h3 class="text-xl font-bold">Ajustes de Perfil</h3>
@@ -57,51 +43,98 @@ async function handleSave() {
 
     <div class="ag-flex-col gap-4">
       <div class="input-group">
-        <ion-item lines="none" class="glass-input !bg-white/5 border border-white/10 rounded-xl">
-          <ion-label position="stacked" class="text-[10px] font-black uppercase tracking-widest text-primary mb-2">Nombre de Usuario</ion-label>
-          <ion-input
-            v-model="displayName"
-            placeholder="Ej: AgroMaster, Juan, etc."
-            @keyup.enter="handleSave"
-            class="text-base"
-          ></ion-input>
-        </ion-item>
+        <label class="input-label" for="profile-name">Nombre de Usuario</label>
+        <input
+          id="profile-name"
+          v-model="displayName"
+          type="text"
+          placeholder="Ej: AgroMaster, Juan, etc."
+          class="profile-input"
+          @keyup.enter="handleSave"
+        />
       </div>
 
-      <ion-button 
-        expand="block" 
-        @click="handleSave" 
-        class="premium-btn !h-12 mt-2"
+      <button
+        id="save-profile-btn"
+        class="save-btn"
+        @click="handleSave"
         :disabled="loading || !displayName.trim()"
       >
-        <ion-icon v-if="!loading" :icon="saveOutline" slot="start" />
-        <ion-spinner v-if="loading" name="crescent" slot="start" />
+        <AppSpinner v-if="loading" size="sm" />
+        <Save v-else :size="18" />
         <span>{{ loading ? 'Guardando...' : 'Guardar Cambios' }}</span>
-      </ion-button>
+      </button>
     </div>
 
-    <div v-if="(authStore.user?.user_metadata as any)?.display_name" class="mt-4 flex items-center gap-2 text-xs text-primary/80 animate-fade-in">
-      <ion-icon :icon="checkmarkCircleOutline" />
+    <div
+      v-if="(authStore.user?.user_metadata as any)?.display_name"
+      class="saved-notice"
+    >
+      <CheckCircle :size="14" class="text-primary" />
       <span>Tu nombre actual es: <strong>{{ (authStore.user?.user_metadata as any).display_name }}</strong></span>
     </div>
   </div>
 </template>
 
 <style scoped>
-.glass-input {
-  --padding-start: 12px;
-  --padding-end: 12px;
-  --highlight-height: 0;
+.input-group { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.input-label {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ag-primary);
 }
 
-.premium-btn {
-  --background: var(--ag-primary);
-  --border-radius: 12px;
+.profile-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--ag-border);
+  border-radius: 12px;
+  color: var(--ag-text);
+  font-size: 1rem;
+  font-family: var(--ag-font);
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.profile-input::placeholder { color: var(--ag-text-muted); }
+
+.profile-input:focus {
+  border-color: var(--ag-primary);
+  background: rgba(var(--ag-primary-rgb), 0.04);
+  box-shadow: 0 0 0 3px rgba(var(--ag-primary-rgb), 0.1);
+}
+
+.save-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 48px;
+  background: var(--ag-primary);
+  border: none;
+  border-radius: 12px;
+  color: white;
   font-weight: 700;
-  margin: 0;
+  font-size: 0.9rem;
+  font-family: var(--ag-font);
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.animate-fade-in {
+.save-btn:hover:not(:disabled) { background: var(--ag-primary-hover); }
+.save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.saved-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  font-size: 0.75rem;
+  color: rgba(var(--ag-primary-rgb), 0.8);
   animation: fadeIn 0.5s ease-out;
 }
 

@@ -27,7 +27,7 @@ const renderedHtml = computed(() => {
 
 <style scoped>
 .markdown-body {
-  color: var(--ion-color-step-850, #d1d5db);
+  color: var(--ag-text);
   line-height: 1.6;
   font-size: 1rem;
 }

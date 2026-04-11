@@ -4,7 +4,7 @@ import { conversationService, chatService } from '@/services/api';
 import { useSystemStore } from '@/stores/system';
 import { useIotStore } from '@/stores/iotStore';
 import { useActuatorBus } from '@/composables/useActuatorBus';
-import { toastController } from '@ionic/vue';
+import { useToast } from '@/composables/useToast';
 import type { Conversation, ChatMessage, ChatHistoryItem } from '@/types';
 
 export const useConversationsStore = defineStore('conversations', () => {
@@ -15,14 +15,12 @@ export const useConversationsStore = defineStore('conversations', () => {
   const isSending = ref(false);
   const error = ref<string | null>(null);
 
-  // --- Pagination ---
   const chatPage = ref(0);
   const chatHasMore = ref(true);
   const CHAT_PAGE_SIZE = 50;
 
   const { emitActuatorActions } = useActuatorBus();
-
-  // --- Actions ---
+  const { showToast } = useToast();
 
   async function fetchConversations() {
     try {
@@ -52,7 +50,6 @@ export const useConversationsStore = defineStore('conversations', () => {
     if (role === 'ai' || role === 'bot' || role === 'assistant') {
       mappedRole = 'ai';
     }
-
     return {
       id: msg.id,
       role: mappedRole,
@@ -64,7 +61,7 @@ export const useConversationsStore = defineStore('conversations', () => {
 
   async function selectConversation(sessionId: string) {
     if (activeSessionId.value === sessionId && messages.value.length > 0) return;
-    
+
     activeSessionId.value = sessionId;
     messages.value = [];
     isLoading.value = true;
@@ -74,15 +71,11 @@ export const useConversationsStore = defineStore('conversations', () => {
 
     try {
       const response = await chatService.getHistory(sessionId, CHAT_PAGE_SIZE, 0);
-      
-      const historyItems = 
-        (response.data as any).history || 
+      const historyItems =
+        (response.data as any).history ||
         (Array.isArray(response.data) ? response.data : []);
 
-      if (historyItems.length < CHAT_PAGE_SIZE) {
-        chatHasMore.value = false;
-      }
-
+      if (historyItems.length < CHAT_PAGE_SIZE) chatHasMore.value = false;
       const mapped = historyItems.map((msg: ChatHistoryItem) => mapHistoryItem(msg, sessionId));
       messages.value = mapped.reverse();
       chatPage.value = 1;
@@ -96,18 +89,14 @@ export const useConversationsStore = defineStore('conversations', () => {
 
   async function loadMoreMessages() {
     if (!chatHasMore.value || isLoading.value || !activeSessionId.value) return;
-    
+
     isLoading.value = true;
     const offset = chatPage.value * CHAT_PAGE_SIZE;
-    
+
     try {
       const response = await chatService.getHistory(activeSessionId.value, CHAT_PAGE_SIZE, offset);
       const items = (response.data as any).history || (Array.isArray(response.data) ? response.data : []);
-      
-      if (items.length < CHAT_PAGE_SIZE) {
-        chatHasMore.value = false;
-      }
-      
+      if (items.length < CHAT_PAGE_SIZE) chatHasMore.value = false;
       const mapped = items.map((msg: ChatHistoryItem) => mapHistoryItem(msg, activeSessionId.value!));
       messages.value = [...mapped.reverse(), ...messages.value];
       chatPage.value++;
@@ -124,7 +113,7 @@ export const useConversationsStore = defineStore('conversations', () => {
       const conv = conversations.value.find(c => c.id === sessionId);
       if (conv) conv.title = title;
     } catch (err) {
-      console.error('Error renaming conversation:', err);
+      console.error('Error renaming:', err);
     }
   }
 
@@ -137,7 +126,7 @@ export const useConversationsStore = defineStore('conversations', () => {
         messages.value = [];
       }
     } catch (err) {
-      console.error('Error deleting conversation:', err);
+      console.error('Error deleting:', err);
     }
   }
 
@@ -148,7 +137,6 @@ export const useConversationsStore = defineStore('conversations', () => {
   }
 
   async function sendMessage(text: string) {
-    // Auto-create session with smart title if none exists
     if (!activeSessionId.value) {
       try {
         const autoTitle = text.slice(0, 30).trim() + (text.length > 30 ? '...' : '');
@@ -158,7 +146,6 @@ export const useConversationsStore = defineStore('conversations', () => {
       }
     }
 
-    // Optimistic UI — add user message immediately
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
@@ -174,13 +161,11 @@ export const useConversationsStore = defineStore('conversations', () => {
       const response = await chatService.sendMessage(text, activeSessionId.value);
       const chatResp = response.data;
 
-      // If backend returned a session_id and we didn't have one, adopt it
       if (chatResp.session_id && !activeSessionId.value) {
         activeSessionId.value = chatResp.session_id;
         await fetchConversations();
       }
 
-      // Add AI response
       const aiMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'ai',
@@ -190,75 +175,48 @@ export const useConversationsStore = defineStore('conversations', () => {
       };
       messages.value = [...messages.value, aiMsg];
 
-      // Process actions
       if (chatResp.actions && chatResp.actions.length > 0) {
         const systemStore = useSystemStore();
         const iotStore = useIotStore();
-        chatResp.actions.forEach((action) => {
-          systemStore.addLog(
-            'AI', 
-            `CMD: ${action.device} → ${action.action} | ${action.reason}`
-          );
-          iotStore.addOptimisticLog({
-            device: action.device,
-            action: action.action,
-            reason: action.reason
-          });
+        chatResp.actions.forEach((action: any) => {
+          systemStore.addLog('AI', `CMD: ${action.device} → ${action.action} | ${action.reason}`);
+          iotStore.addOptimisticLog({ device: action.device, action: action.action, reason: action.reason });
         });
         emitActuatorActions(chatResp.actions);
       }
 
-      // Process alerts
       if (chatResp.alerts && chatResp.alerts.length > 0) {
         const systemStore = useSystemStore();
-        chatResp.alerts.forEach(async (alert) => {
-          const toast = await toastController.create({
-            message: `⚠️ ${alert}`,
-            duration: 4000,
-            color: 'warning',
-            position: 'top',
-          });
-          await toast.present();
+        chatResp.alerts.forEach((alert: string) => {
+          showToast(`⚠️ ${alert}`, 'warning', 4000);
           systemStore.addLog('ALERT', alert);
         });
       }
 
-      // Update sidebar timestamp so the active session bubbles to the top
       if (activeSessionId.value) {
         const conv = conversations.value.find(c => c.id === activeSessionId.value);
         if (conv) {
           conv.updated_at = new Date().toISOString();
-          conversations.value.sort(
-            (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+          conversations.value.sort((a, b) =>
+            new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
           );
         }
       }
 
       return response.data;
     } catch (err: any) {
-      const is429 = err.response && err.response.status === 429;
-      const baseErrorMsg = err instanceof Error ? err.message : 'Error al enviar el mensaje';
-      const errMsg = is429 
-        ? 'El servicio de análisis de IA está operando al máximo de su capacidad. Por favor, reintenta en unos segundos.'
-        : baseErrorMsg;
-        
+      const is429 = err.response?.status === 429;
+      const errMsg = is429
+        ? 'El servicio de IA está al máximo de capacidad. Reintenta en unos segundos.'
+        : (err instanceof Error ? err.message : 'Error al enviar el mensaje');
+
       error.value = errMsg;
+      if (is429) showToast(errMsg, 'warning', 5000);
 
-      if (is429) {
-        const toast = await toastController.create({
-          message: errMsg,
-          duration: 5000,
-          color: 'warning',
-          position: 'top',
-        });
-        await toast.present();
-      }
-
-      // Show error as AI bubble so the user gets visual feedback
       const errorMessage: ChatMessage = {
         id: (Date.now() + 2).toString(),
         role: 'ai',
-        message: `> **Error**: ${errMsg}. Revisa tu conexión o intenta de nuevo en unos momentos.`,
+        message: `> **Error**: ${errMsg}. Revisa tu conexión o intenta de nuevo.`,
         created_at: new Date().toISOString(),
         session_id: activeSessionId.value,
       };
@@ -269,20 +227,9 @@ export const useConversationsStore = defineStore('conversations', () => {
   }
 
   return {
-    conversations,
-    activeSessionId,
-    messages,
-    isLoading,
-    isSending,
-    error,
-    fetchConversations,
-    createConversation,
-    selectConversation,
-    renameConversation,
-    deleteConversation,
-    clearActiveSession,
-    sendMessage,
-    loadMoreMessages,
-    chatHasMore
+    conversations, activeSessionId, messages, isLoading, isSending, error,
+    fetchConversations, createConversation, selectConversation,
+    renameConversation, deleteConversation, clearActiveSession,
+    sendMessage, loadMoreMessages, chatHasMore,
   };
 });

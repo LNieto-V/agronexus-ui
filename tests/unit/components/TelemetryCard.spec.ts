@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 import TelemetryCard from '@/components/TelemetryCard.vue';
-import { thermometerOutline } from 'ionicons/icons';
+import { Thermometer } from 'lucide-vue-next';
 
 describe('TelemetryCard.vue', () => {
   it('debería renderizar las props correctamente', () => {
@@ -10,12 +10,9 @@ describe('TelemetryCard.vue', () => {
         label: 'Temperatura',
         value: 25.5,
         unit: '°C',
-        icon: thermometerOutline,
+        icon: Thermometer,
         color: 'red',
         progress: 60
-      },
-      global: {
-        stubs: ['ion-icon']
       }
     });
 
@@ -31,12 +28,9 @@ describe('TelemetryCard.vue', () => {
         label: 'Humedad',
         value: 70,
         unit: '%',
-        icon: thermometerOutline,
+        icon: Thermometer,
         color: 'blue',
         progress: progressValue
-      },
-      global: {
-        stubs: ['ion-icon']
       }
     });
 
@@ -50,12 +44,9 @@ describe('TelemetryCard.vue', () => {
         label: 'pH',
         value: 6.5,
         unit: 'pH',
-        icon: thermometerOutline,
+        icon: Thermometer,
         color: 'purple',
         progress: 50
-      },
-      global: {
-        stubs: ['ion-icon']
       }
     });
 

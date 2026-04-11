@@ -1,15 +1,28 @@
 <script setup lang="ts">
-import { IonInfiniteScroll, IonInfiniteScrollContent } from '@ionic/vue';
 import type { ActuatorLogEntry } from '@/types';
+import { ref, onMounted, onUnmounted } from 'vue';
 
-defineProps<{
+const props = defineProps<{
   logs: ActuatorLogEntry[];
   hasMore: boolean;
 }>();
 
-const emit = defineEmits<{
-  'infinite': [event: any];
-}>();
+const emit = defineEmits<{'load-more': []}>();
+
+const sentinelEl = ref<HTMLDivElement | null>(null);
+let observer: IntersectionObserver | null = null;
+
+onMounted(() => {
+  if (!sentinelEl.value) return;
+  observer = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting && props.hasMore) {
+      emit('load-more');
+    }
+  }, { threshold: 0.1 });
+  observer.observe(sentinelEl.value);
+});
+
+onUnmounted(() => observer?.disconnect());
 
 const tagColor = (device: string) => {
   if (device === 'BOMBA' || device === 'WATER' || device === 'PUMP') return 'tag-pwr';
@@ -18,9 +31,8 @@ const tagColor = (device: string) => {
   return 'tag-default';
 };
 
-const formatTime = (iso: string) => {
-  return new Date(iso).toLocaleTimeString('en-GB', { hour12: false });
-};
+const formatTime = (iso: string) =>
+  new Date(iso).toLocaleTimeString('en-GB', { hour12: false });
 </script>
 
 <template>
@@ -32,14 +44,14 @@ const formatTime = (iso: string) => {
       <div class="log-header">
         <div class="log-header-left">
           <div class="live-pill">
-            <span class="live-dot"></span>
+            <span class="live-dot" />
             <span>LIVE</span>
           </div>
         </div>
         <div class="traffic-lights">
-          <span class="tl red"></span>
-          <span class="tl yellow"></span>
-          <span class="tl green"></span>
+          <span class="tl red" />
+          <span class="tl yellow" />
+          <span class="tl green" />
         </div>
       </div>
 
@@ -52,13 +64,8 @@ const formatTime = (iso: string) => {
         </div>
         <div v-if="logs.length === 0" class="log-empty">No events recorded.</div>
 
-        <ion-infinite-scroll 
-          @ionInfinite="emit('infinite', $event)"
-          :disabled="!hasMore"
-          threshold="100px"
-        >
-          <ion-infinite-scroll-content loading-spinner="crescent"></ion-infinite-scroll-content>
-        </ion-infinite-scroll>
+        <!-- Infinite scroll sentinel -->
+        <div ref="sentinelEl" class="scroll-sentinel" />
       </div>
     </div>
   </div>
@@ -81,7 +88,6 @@ const formatTime = (iso: string) => {
   overflow: hidden;
 }
 
-/* Header */
 .log-header {
   display: flex;
   align-items: center;
@@ -121,23 +127,12 @@ const formatTime = (iso: string) => {
   50% { opacity: 0.2; }
 }
 
-.traffic-lights {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-.tl {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.tl.red    { background: #ff5f57; }
+.traffic-lights { display: flex; align-items: center; gap: 0.3rem; }
+.tl { width: 8px; height: 8px; border-radius: 50%; }
+.tl.red { background: #ff5f57; }
 .tl.yellow { background: #febc2e; }
-.tl.green  { background: #28c840; }
+.tl.green { background: #28c840; }
 
-/* Log body */
 .log-body {
   padding: 0.75rem 0;
   max-height: 200px;
@@ -153,9 +148,7 @@ const formatTime = (iso: string) => {
   transition: background 0.15s ease;
 }
 
-.log-entry:hover {
-  background: rgba(255, 255, 255, 0.025);
-}
+.log-entry:hover { background: rgba(255,255,255,0.025); }
 
 .log-time {
   font-size: 0.7rem;
@@ -189,5 +182,10 @@ const formatTime = (iso: string) => {
   font-size: 0.75rem;
   color: var(--ag-text-muted);
   font-style: italic;
+}
+
+.scroll-sentinel {
+  height: 1px;
+  margin: 0.5rem 0;
 }
 </style>

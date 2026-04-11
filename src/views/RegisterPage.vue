@@ -1,97 +1,10 @@
-<template>
-  <ion-page>
-    <ion-content :fullscreen="true" class="ion-padding auth-page">
-      <div class="auth-wrapper">
-        <div class="glass-card auth-card">
-          <div class="brand-section">
-            <div class="logo-container">
-              <ion-icon :icon="sparklesOutline" class="logo-icon animate-glow" />
-            </div>
-            <h1 class="brand-name">Join <span class="text-primary">AgroNexus</span></h1>
-            <p class="brand-tagline">Start your agricultural optimization journey</p>
-          </div>
-
-          <form @submit.prevent="handleRegister" class="auth-form">
-            <div class="input-group">
-              <ion-item lines="none" class="glass-input">
-                <ion-icon :icon="personOutline" slot="start" />
-                <ion-input
-                  v-model="displayName"
-                  type="text"
-                  placeholder="Username (e.g. AgroMaster)"
-                  required
-                ></ion-input>
-              </ion-item>
-            </div>
-
-            <div class="input-group">
-              <ion-item lines="none" class="glass-input">
-                <ion-icon :icon="mailOutline" slot="start" />
-                <ion-input
-                  v-model="email"
-                  type="email"
-                  placeholder="Email Address"
-                  required
-                ></ion-input>
-              </ion-item>
-            </div>
-
-            <div class="input-group">
-              <ion-item lines="none" class="glass-input">
-                <ion-icon :icon="lockClosedOutline" slot="start" />
-                <ion-input
-                  v-model="password"
-                  type="password"
-                  placeholder="Password"
-                  required
-                ></ion-input>
-              </ion-item>
-            </div>
-
-            <div class="input-group">
-              <ion-item lines="none" class="glass-input">
-                <ion-icon :icon="shieldCheckmarkOutline" slot="start" />
-                <ion-input
-                  v-model="confirmPassword"
-                  type="password"
-                  placeholder="Confirm Password"
-                  required
-                ></ion-input>
-              </ion-item>
-            </div>
-
-            <ion-button 
-              expand="block" 
-              type="submit" 
-              class="premium-btn mt-6"
-              :disabled="loading"
-            >
-              <ion-spinner v-if="loading" slot="start" name="crescent"></ion-spinner>
-              <span>{{ loading ? 'Creating Account...' : 'Get Started' }}</span>
-            </ion-button>
-          </form>
-
-          <div class="auth-footer mt-8">
-            <p>Already have an account?</p>
-            <ion-button fill="clear" router-link="/login" class="text-primary font-bold">
-              Sign In
-            </ion-button>
-          </div>
-        </div>
-      </div>
-    </ion-content>
-  </ion-page>
-</template>
-
 <script setup lang="ts">
-import { 
-  IonPage, IonContent, IonInput, IonButton, 
-  IonIcon, IonItem, IonSpinner, toastController 
-} from '@ionic/vue';
-import { sparklesOutline, mailOutline, lockClosedOutline, shieldCheckmarkOutline, personOutline } from 'ionicons/icons';
 import { ref } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { useRouter } from 'vue-router';
+import { useToast } from '@/composables/useToast';
+import { Sparkles, Mail, Lock, ShieldCheck, User } from 'lucide-vue-next';
+import AppSpinner from '@/components/AppSpinner.vue';
 
 const displayName = ref('');
 const email = ref('');
@@ -100,130 +13,249 @@ const confirmPassword = ref('');
 const loading = ref(false);
 const authStore = useAuthStore();
 const router = useRouter();
+const { showToast } = useToast();
 
 const handleRegister = async () => {
   if (password.value !== confirmPassword.value) {
-    const toast = await toastController.create({
-      message: "Passwords do not match",
-      duration: 3000,
-      color: 'warning',
-      position: 'bottom'
-    });
-    await toast.present();
+    showToast('Passwords do not match', 'warning', 3000);
     return;
   }
-
   loading.value = true;
   try {
-    await authStore.signUp({ 
-      email: email.value, 
+    await authStore.signUp({
+      email: email.value,
       password: password.value,
       data: { display_name: displayName.value }
     });
-    const toast = await toastController.create({
-      message: 'Account created! Please check your email for confirmation.',
-      duration: 5000,
-      color: 'success',
-      position: 'bottom'
-    });
-    await toast.present();
+    showToast('Account created! Please check your email for confirmation.', 'success', 5000);
     router.replace('/login');
   } catch (error: any) {
-    const toast = await toastController.create({
-      message: error.message || 'Registration failed',
-      duration: 3000,
-      color: 'danger',
-      position: 'bottom'
-    });
-    await toast.present();
+    showToast(error.message || 'Registration failed', 'danger', 3000);
   } finally {
     loading.value = false;
   }
 };
 </script>
 
+<template>
+  <div class="auth-page">
+    <div class="auth-wrapper">
+      <div class="auth-card">
+        <div class="brand-section">
+          <div class="logo-container">
+            <Sparkles :size="32" class="text-primary" />
+          </div>
+          <h1 class="brand-name">Join <span class="text-primary">AgroNexus</span></h1>
+          <p class="brand-tagline">Start your agricultural optimization journey</p>
+        </div>
+
+        <form @submit.prevent="handleRegister" class="auth-form" id="register-form">
+          <div class="input-wrap">
+            <User :size="18" class="input-icon" />
+            <input
+              id="register-name"
+              v-model="displayName"
+              type="text"
+              placeholder="Username (e.g. AgroMaster)"
+              required
+              autocomplete="username"
+              class="auth-input"
+            />
+          </div>
+
+          <div class="input-wrap">
+            <Mail :size="18" class="input-icon" />
+            <input
+              id="register-email"
+              v-model="email"
+              type="email"
+              placeholder="Email Address"
+              required
+              autocomplete="email"
+              class="auth-input"
+            />
+          </div>
+
+          <div class="input-wrap">
+            <Lock :size="18" class="input-icon" />
+            <input
+              id="register-password"
+              v-model="password"
+              type="password"
+              placeholder="Password"
+              required
+              autocomplete="new-password"
+              class="auth-input"
+            />
+          </div>
+
+          <div class="input-wrap">
+            <ShieldCheck :size="18" class="input-icon" />
+            <input
+              id="register-confirm"
+              v-model="confirmPassword"
+              type="password"
+              placeholder="Confirm Password"
+              required
+              autocomplete="new-password"
+              class="auth-input"
+            />
+          </div>
+
+          <button
+            id="register-submit"
+            type="submit"
+            class="premium-btn"
+            :disabled="loading"
+          >
+            <AppSpinner v-if="loading" size="sm" />
+            <span>{{ loading ? 'Creating Account...' : 'Get Started' }}</span>
+          </button>
+        </form>
+
+        <div class="auth-footer">
+          <p>Already have an account?</p>
+          <RouterLink to="/login" class="link-btn">Sign In</RouterLink>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
 <style scoped>
 .auth-page {
-  --background: radial-gradient(circle at bottom left, #1a2a1a 0%, #0a0a0a 100%);
-}
-
-.auth-wrapper {
+  min-height: 100vh;
+  background: radial-gradient(circle at bottom left, #1a2a1a 0%, #09090b 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100%;
+  padding: 1rem;
+}
+
+.auth-wrapper {
+  width: 100%;
+  max-width: 420px;
 }
 
 .auth-card {
-  width: 100%;
-  max-width: 400px;
-  padding: 2.5rem 2rem;
-  text-align: center;
-  backdrop-filter: blur(20px);
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 24px;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+  padding: 2.5rem 2rem;
+  text-align: center;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
 }
 
-.brand-section {
-  margin-bottom: 2.5rem;
-}
+.brand-section { margin-bottom: 2rem; }
 
 .logo-container {
   width: 64px;
   height: 64px;
-  margin: 0 auto 1.5rem;
+  margin: 0 auto 1.25rem;
   background: var(--ag-primary-soft);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.logo-icon {
-  font-size: 32px;
-  color: var(--ag-primary);
+  animation: glow 3s ease infinite;
 }
 
 .brand-name {
-  font-size: 2rem;
+  font-size: 1.875rem;
   font-weight: 800;
   margin: 0;
-  letter-spacing: -1px;
+  letter-spacing: -0.03em;
 }
 
 .brand-tagline {
-  color: #888;
-  font-size: 0.9rem;
-  margin-top: 0.5rem;
+  color: var(--ag-text-muted);
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0;
 }
 
 .auth-form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.875rem;
 }
 
-.glass-input {
-  --background: rgba(255, 255, 255, 0.05);
-  --border-radius: 12px;
-  --color: white;
-  --placeholder-color: #666;
+.input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 0.875rem;
+  color: var(--ag-text-muted);
+  pointer-events: none;
+}
+
+.auth-input {
+  width: 100%;
+  padding: 0.875rem 1rem 0.875rem 2.75rem;
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: var(--ag-text);
+  font-size: 0.9rem;
+  font-family: var(--ag-font);
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.auth-input::placeholder { color: var(--ag-text-muted); }
+
+.auth-input:focus {
+  border-color: var(--ag-primary);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 0 0 3px rgba(var(--ag-primary-rgb), 0.15);
 }
 
 .premium-btn {
-  --background: var(--ag-primary);
-  --border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
   height: 52px;
+  margin-top: 0.5rem;
+  background: var(--ag-primary);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 1rem;
   font-weight: 700;
-  text-transform: none;
+  font-family: var(--ag-font);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(var(--ag-primary-rgb), 0.3);
 }
 
-.animate-glow {
-  animation: glow 3s infinite ease-in-out;
+.premium-btn:hover:not(:disabled) {
+  background: var(--ag-primary-hover);
+  transform: translateY(-1px);
 }
+
+.premium-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.auth-footer {
+  margin-top: 2rem;
+  font-size: 0.875rem;
+  color: var(--ag-text-muted);
+}
+
+.auth-footer p { margin: 0 0 0.5rem; }
+
+.link-btn {
+  color: var(--ag-primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.link-btn:hover { opacity: 0.8; }
 
 @keyframes glow {
   0%, 100% { filter: drop-shadow(0 0 5px var(--ag-primary)); }

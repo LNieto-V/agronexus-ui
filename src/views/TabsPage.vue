@@ -1,21 +1,13 @@
 <script setup lang="ts">
-import { 
-  IonIcon, IonPage, IonRouterOutlet, IonSplitPane, IonMenu, 
-  IonContent, IonList, IonItem, IonMenuToggle, IonLabel
-} from '@ionic/vue';
-import { 
-  homeOutline,
-  thermometerOutline, 
-  chatbubbleEllipsesOutline, 
-  pulseOutline,
-  documentTextOutline,
-  logOutOutline
-} from 'ionicons/icons';
-import { onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { ref, computed, onMounted } from 'vue';
+import { RouterView, useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useIotStore } from '@/stores/iotStore';
 import { useTelemetrySSE } from '@/composables/useTelemetrySSE';
+import {
+  Home, Thermometer, MessageCircle, Radio,
+  FileText, LogOut, Menu, X, Leaf
+} from 'lucide-vue-next';
 
 const route = useRoute();
 const router = useRouter();
@@ -23,10 +15,34 @@ const authStore = useAuthStore();
 const iotStore = useIotStore();
 const { connect: connectSSE } = useTelemetrySSE();
 
+const sidebarOpen = ref(false);
+
+const navItems = [
+  { path: '/tabs/home', label: 'Overview', icon: Home },
+  { path: '/tabs/dashboard', label: 'Telemetry', icon: Thermometer },
+  { path: '/tabs/assistant', label: 'AI Assistant', icon: MessageCircle },
+  { path: '/tabs/control', label: 'Systems', icon: Radio },
+  { path: '/tabs/reports', label: 'Informes', icon: FileText },
+];
+
+const isXl = ref(false);
+
+function checkWidth() {
+  isXl.value = window.innerWidth >= 1280;
+  if (isXl.value) sidebarOpen.value = false;
+}
+
 onMounted(() => {
   connectSSE();
   iotStore.fetchZones();
+  checkWidth();
+  window.addEventListener('resize', checkWidth);
 });
+
+function navigate(path: string) {
+  router.push(path);
+  if (!isXl.value) sidebarOpen.value = false;
+}
 
 async function handleLogout() {
   try {
@@ -39,208 +55,234 @@ async function handleLogout() {
 </script>
 
 <template>
-  <ion-page>
-    <ion-split-pane content-id="main-content" when="xl">
-      <!-- Premium Sidebar -->
-      <ion-menu content-id="main-content" class="ag-sidebar">
-        <ion-content class="sidebar-content">
-          <div class="sidebar-header">
-            <h1 class="ag-neon-glow text-2xl font-black tracking-tight">AgroNexus <span class="ag-badge">AI</span></h1>
-            <p class="sidebar-tagline">Advanced Hydroponics</p>
+  <div class="app-shell">
+    <!-- Overlay for mobile sidebar -->
+    <Transition name="fade">
+      <div
+        v-if="sidebarOpen && !isXl"
+        class="sidebar-overlay"
+        @click="sidebarOpen = false"
+      />
+    </Transition>
+
+    <!-- Sidebar -->
+    <Transition name="sidebar">
+      <aside
+        v-show="isXl || sidebarOpen"
+        class="app-sidebar"
+        :class="{ 'sidebar-mobile': !isXl }"
+        id="nav-sidebar"
+        aria-label="Main navigation"
+      >
+        <!-- Brand -->
+        <div class="sidebar-brand">
+          <div class="brand-icon">
+            <Leaf :size="20" />
           </div>
-          
-          <ion-list lines="none" class="sidebar-nav">
-            <ion-menu-toggle :auto-hide="false">
-              <ion-item 
-                button 
-                router-link="/tabs/home" 
-                :detail="false" 
-                class="sidebar-item"
-                :class="{ 'item-active': route.path === '/tabs/home' }"
-              >
-                <div class="active-indicator"></div>
-                <ion-icon slot="start" :icon="homeOutline" />
-                <ion-label>Overview</ion-label>
-              </ion-item>
-
-              <ion-item 
-                button 
-                router-link="/tabs/dashboard" 
-                :detail="false" 
-                class="sidebar-item"
-                :class="{ 'item-active': route.path === '/tabs/dashboard' }"
-              >
-                <div class="active-indicator"></div>
-                <ion-icon slot="start" :icon="thermometerOutline" />
-                <ion-label>Telemetry</ion-label>
-              </ion-item>
-
-              <ion-item 
-                button 
-                router-link="/tabs/assistant" 
-                :detail="false" 
-                class="sidebar-item"
-                :class="{ 'item-active': route.path === '/tabs/assistant' }"
-              >
-                <div class="active-indicator"></div>
-                <ion-icon slot="start" :icon="chatbubbleEllipsesOutline" />
-                <ion-label>AI Assistant</ion-label>
-              </ion-item>
-
-              <ion-item 
-                button 
-                router-link="/tabs/control" 
-                :detail="false" 
-                class="sidebar-item"
-                :class="{ 'item-active': route.path === '/tabs/control' }"
-              >
-                <div class="active-indicator"></div>
-                <ion-icon slot="start" :icon="pulseOutline" />
-                <ion-label>Systems</ion-label>
-              </ion-item>
-
-              <ion-item 
-                button 
-                router-link="/tabs/reports" 
-                :detail="false" 
-                class="sidebar-item"
-                :class="{ 'item-active': route.path === '/tabs/reports' }"
-              >
-                <div class="active-indicator"></div>
-                <ion-icon slot="start" :icon="documentTextOutline" />
-                <ion-label>Informes</ion-label>
-              </ion-item>
-            </ion-menu-toggle>
-          </ion-list>
-
-          <div class="sidebar-footer-nav">
-             <ion-item button @click="handleLogout" :detail="false" class="sidebar-item logout-item">
-                <ion-icon slot="start" :icon="logOutOutline" />
-                <ion-label>Cerrar Sesión</ion-label>
-             </ion-item>
+          <div>
+            <h1 class="brand-name">AgroNexus <span class="ag-badge">AI</span></h1>
+            <p class="brand-tagline">Advanced Hydroponics</p>
           </div>
+          <button
+            v-if="!isXl"
+            class="sidebar-close-btn"
+            @click="sidebarOpen = false"
+            aria-label="Close sidebar"
+          >
+            <X :size="18" />
+          </button>
+        </div>
 
-          
+        <!-- Nav -->
+        <nav class="sidebar-nav" role="navigation">
+          <button
+            v-for="item in navItems"
+            :key="item.path"
+            class="sidebar-item"
+            :class="{ 'item-active': route.path === item.path }"
+            @click="navigate(item.path)"
+            :aria-current="route.path === item.path ? 'page' : undefined"
+          >
+            <component :is="item.icon" :size="18" class="nav-icon" />
+            <span>{{ item.label }}</span>
+          </button>
+        </nav>
+
+        <!-- Footer -->
+        <div class="sidebar-footer">
+          <button class="sidebar-item logout-item" @click="handleLogout" id="logout-btn">
+            <LogOut :size="18" class="nav-icon" />
+            <span>Cerrar Sesión</span>
+          </button>
+
           <div class="status-card">
             <p class="status-label">Core Status</p>
             <div class="status-row">
               <div class="status-indicator">
-                <div class="status-dot-inner"></div>
-                <div class="status-dot-ping"></div>
+                <div class="status-dot-inner" />
+                <div class="status-dot-ping" />
               </div>
               <span class="status-text">Mainframe Active</span>
             </div>
           </div>
-        </ion-content>
-      </ion-menu>
+        </div>
+      </aside>
+    </Transition>
 
-      <!-- Main Content Area -->
-      <ion-router-outlet id="main-content" />
+    <!-- Main content -->
+    <div class="main-area" id="main-content">
+      <!-- Mobile top bar -->
+      <div v-if="!isXl" class="mobile-topbar">
+        <button
+          class="hamburger-btn"
+          @click="sidebarOpen = true"
+          aria-label="Open menu"
+          aria-controls="nav-sidebar"
+          aria-expanded="false"
+          id="menu-toggle-btn"
+        >
+          <Menu :size="22" />
+        </button>
+        <span class="mobile-title ag-text-gradient">AgroNexus AI</span>
+        <div style="width: 40px;" />
+      </div>
 
-    </ion-split-pane>
-  </ion-page>
+      <!-- Routed view -->
+      <RouterView v-slot="{ Component }">
+        <Transition name="page" mode="out-in">
+          <component :is="Component" :key="route.path" />
+        </Transition>
+      </RouterView>
+    </div>
+  </div>
 </template>
 
 <style scoped>
-/* Sidebar */
-.sidebar-header {
-  padding: 1.5rem;
+.app-shell {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  background: var(--ag-bg);
 }
 
-.sidebar-tagline {
+/* ── Sidebar ── */
+.app-sidebar {
+  width: 280px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--ag-bg);
+  border-right: 1px solid var(--ag-border);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.sidebar-mobile {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+}
+
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+}
+
+.sidebar-brand {
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  flex-shrink: 0;
+}
+
+.brand-icon {
+  width: 36px;
+  height: 36px;
+  background: rgba(var(--ag-primary-rgb), 0.12);
+  color: var(--ag-primary);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.brand-name {
+  font-size: 1rem;
+  font-weight: 900;
+  margin: 0;
+  letter-spacing: -0.02em;
+  color: var(--ag-text);
+}
+
+.brand-tagline {
   font-size: 8px;
   opacity: 0.4;
   font-weight: 700;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-  margin-top: 0.25rem;
+  margin: 0.15rem 0 0;
 }
 
-.ag-badge {
-  font-size: 10px;
-  background: rgba(var(--ag-primary-rgb), 0.1);
-  color: var(--ag-primary);
-  padding: 0.125rem 0.5rem;
-  border-radius: 4px;
-  margin-left: 0.25rem;
+.sidebar-close-btn {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--ag-text-muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  border-radius: 6px;
+  transition: color 0.2s;
 }
+
+.sidebar-close-btn:hover { color: var(--ag-text); }
 
 .sidebar-nav {
-  background: transparent;
-  margin-top: 1.5rem;
-  padding: 0 0.75rem;
+  flex: 1;
+  padding: 1rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
 }
 
-.sidebar-item {
-  --padding-start: 12px;
-  --inner-padding-end: 12px;
-  --border-radius: 12px;
-  --background: transparent;
-  margin-bottom: 4px;
-  position: relative;
-  transition: all 0.3s ease;
-}
-
-.active-indicator {
-  position: absolute;
-  left: 0;
-  width: 3px;
-  height: 0;
-  background: var(--ag-primary);
-  border-radius: 0 4px 4px 0;
-  transition: height 0.3s ease;
-}
-
-.item-active .active-indicator { height: 20px; }
-
-.sidebar-item ion-icon {
-  font-size: 1.25rem;
+.nav-icon {
+  flex-shrink: 0;
   opacity: 0.5;
-  transition: all 0.3s ease;
+  transition: opacity 0.2s;
 }
 
-.item-active ion-icon {
-  opacity: 1;
-  color: var(--ag-primary);
-}
-
-.item-active ion-label {
-  font-weight: 700;
-  letter-spacing: 0.5px;
-}
-
-.sidebar-footer-nav {
-  margin-top: auto;
-  padding: 0 0.75rem 1rem;
+.sidebar-footer {
+  padding: 0.75rem;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .logout-item {
-  --color: var(--ag-danger);
-  opacity: 0.8;
+  color: var(--ag-danger) !important;
 }
 
-.logout-item ion-icon {
-  color: var(--ag-danger);
-  opacity: 1;
-}
+.logout-item .nav-icon { color: var(--ag-danger); opacity: 1; }
 
-
-/* Status Card */
+/* Status card */
 .status-card {
-  position: absolute;
-  bottom: 2rem;
-  left: 1rem;
-  right: 1rem;
-  padding: 1.25rem;
-  background: rgba(255,255,255,0.03);
-  backdrop-filter: blur(10px);
+  padding: 1rem;
+  background: rgba(255,255,255,0.025);
   border: 1px solid rgba(255,255,255,0.05);
-  border-radius: 16px;
-  overflow: hidden;
+  border-radius: 12px;
 }
 
 .status-label {
@@ -249,7 +291,7 @@ async function handleLogout() {
   text-transform: uppercase;
   letter-spacing: 0.2em;
   font-weight: 900;
-  margin-bottom: 0.5rem;
+  margin: 0 0 0.5rem;
 }
 
 .status-row {
@@ -281,7 +323,6 @@ async function handleLogout() {
 .status-text {
   font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.025em;
   color: rgba(255,255,255,0.9);
 }
 
@@ -289,8 +330,6 @@ async function handleLogout() {
   0% { transform: scale(1); opacity: 1; }
   15% { transform: scale(1.2); opacity: 0.8; }
   30% { transform: scale(1); opacity: 1; }
-  45% { transform: scale(1.1); opacity: 0.9; }
-  60% { transform: scale(1); opacity: 1; }
 }
 
 @keyframes ping {
@@ -298,15 +337,57 @@ async function handleLogout() {
   50% { transform: scale(1.8); opacity: 0; }
 }
 
-@media (max-width: 767px) { .hide-on-mobile { display: none !important; } }
-@media (min-width: 768px) { .hide-on-desktop { display: none !important; } }
+/* ── Main area ── */
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
 
-/* Hide Sidebar Scrollbar Globally */
-.sidebar-content::v-deep(main.inner-scroll) {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+/* ── Mobile topbar ── */
+.mobile-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--ag-bg);
+  border-bottom: 1px solid var(--ag-border);
+  flex-shrink: 0;
 }
-.sidebar-content::v-deep(main.inner-scroll::-webkit-scrollbar) {
-  display: none;
+
+.hamburger-btn {
+  background: transparent;
+  border: none;
+  color: var(--ag-text-muted);
+  cursor: pointer;
+  padding: 0.35rem;
+  display: flex;
+  align-items: center;
+  border-radius: 8px;
+  transition: all 0.2s;
 }
+
+.hamburger-btn:hover {
+  background: var(--ag-card);
+  color: var(--ag-text);
+}
+
+.mobile-title {
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+/* ── Transitions ── */
+.fade-enter-active, .fade-leave-active { transition: opacity 0.25s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.sidebar-enter-active, .sidebar-leave-active { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+.sidebar-enter-from, .sidebar-leave-to { transform: translateX(-100%); }
+
+.page-enter-active { transition: opacity 0.2s ease, transform 0.2s ease; }
+.page-leave-active { transition: opacity 0.15s ease; }
+.page-enter-from { opacity: 0; transform: translateY(8px); }
+.page-leave-to { opacity: 0; }
 </style>

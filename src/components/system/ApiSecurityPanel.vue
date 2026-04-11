@@ -1,45 +1,31 @@
 <script setup lang="ts">
-import { IonIcon } from '@ionic/vue';
-import { 
-  shieldCheckmarkOutline, 
-  eyeOutline, 
-  flashOutline, 
-  arrowForwardOutline,
-  lockClosedOutline,
-  warningOutline
-} from 'ionicons/icons';
+import { ShieldCheck, Eye, Zap, ArrowRight, Lock, AlertTriangle } from 'lucide-vue-next';
 import { computed } from 'vue';
 import { useIotStore } from '@/stores/iotStore';
 import type { ApiKeyType } from '@/types';
 
 const iotStore = useIotStore();
-
 const hasZoneSelected = computed(() => !!iotStore.selectedZoneId);
-
 const selectedZoneName = computed(() => {
   if (!iotStore.selectedZoneId) return null;
   const zone = iotStore.zones.find(z => z.id === iotStore.selectedZoneId);
   return zone?.name || 'Unknown Zone';
 });
 
-defineEmits<{
-  generate: [type: ApiKeyType]
-}>();
+defineEmits<{ generate: [type: ApiKeyType] }>();
 </script>
 
 <template>
   <div class="security-section">
     <div class="section-label">Hardware &amp; Security Management</div>
 
-    <!-- Main Card -->
     <div class="security-card">
-      
       <!-- Header -->
       <div class="security-header">
         <div class="header-icon-wrap">
-          <ion-icon :icon="shieldCheckmarkOutline" class="header-icon" />
+          <ShieldCheck :size="22" class="header-icon" />
         </div>
-        <div class="header-text">
+        <div>
           <h4 class="header-title">Hardware Access Provisioning</h4>
           <p v-if="hasZoneSelected" class="header-desc">
             Provision secure API keys for <strong class="text-primary">{{ selectedZoneName }}</strong>.
@@ -50,71 +36,57 @@ defineEmits<{
         </div>
       </div>
 
-      <!-- Divider -->
-      <div class="card-divider"></div>
+      <div class="card-divider" />
 
-      <!-- Key Types -->
+      <!-- Key tiles -->
       <div class="keys-grid">
-
         <!-- Read Key -->
         <div class="key-tile read">
           <div class="key-tile-top">
-            <div class="tile-icon read-icon">
-              <ion-icon :icon="eyeOutline" />
-            </div>
+            <div class="tile-icon read-icon"><Eye :size="18" /></div>
             <div class="tile-badge read-badge">READ ONLY</div>
           </div>
           <h5 class="tile-title">Telemetry Access</h5>
-          <p class="tile-desc">Read-only access to sensor data and historical telemetry. Safe for dashboards and monitoring.</p>
+          <p class="tile-desc">Read-only access to sensor data and historical telemetry. Safe for dashboards.</p>
           <div v-if="!hasZoneSelected" class="scope-tag">GLOBAL SCOPE</div>
-          <button 
-            class="tile-btn read-btn" 
-            @click="$emit('generate', 'read')"
-          >
-            Generate Key
-            <ion-icon :icon="arrowForwardOutline" class="btn-icon" />
+          <button class="tile-btn read-btn" @click="$emit('generate', 'read')" id="gen-read-key-btn">
+            Generate Key <ArrowRight :size="14" class="btn-icon" />
           </button>
         </div>
 
         <!-- Write Key -->
         <div class="key-tile write" :class="{ 'tile-locked': !hasZoneSelected }">
           <div class="key-tile-top">
-            <div class="tile-icon write-icon">
-              <ion-icon :icon="flashOutline" />
-            </div>
+            <div class="tile-icon write-icon"><Zap :size="18" /></div>
             <div class="tile-badge write-badge">FULL ACCESS</div>
           </div>
           <h5 class="tile-title">Full Control</h5>
           <p class="tile-desc">Full access to actuators and system configuration. Requires a specific zone.</p>
           <p v-if="!hasZoneSelected" class="lock-msg">
-            <ion-icon :icon="warningOutline" /> Select a zone first
+            <AlertTriangle :size="14" /> Select a zone first
           </p>
-          <button 
-            class="tile-btn write-btn" 
+          <button
+            class="tile-btn write-btn"
             :disabled="!hasZoneSelected"
             @click="$emit('generate', 'write')"
+            id="gen-write-key-btn"
           >
-            Generate Key
-            <ion-icon :icon="arrowForwardOutline" class="btn-icon" />
+            Generate Key <ArrowRight :size="14" class="btn-icon" />
           </button>
         </div>
-
       </div>
 
       <!-- Footer -->
       <div class="security-footer">
-        <ion-icon :icon="lockClosedOutline" class="footer-icon" />
+        <Lock :size="14" class="footer-icon" />
         <span class="footer-text">SHA-256 HMAC · End-to-End Encrypted · Keys shown once</span>
       </div>
-
     </div>
   </div>
 </template>
 
 <style scoped>
-.security-section {
-  margin-top: 2.5rem;
-}
+.security-section { margin-top: 2.5rem; }
 
 .section-label {
   font-size: 0.7rem;
@@ -125,7 +97,6 @@ defineEmits<{
   margin-bottom: 1rem;
 }
 
-/* ── Main Card ── */
 .security-card {
   background: var(--ag-card);
   border: 1px solid var(--ag-border);
@@ -133,7 +104,6 @@ defineEmits<{
   overflow: hidden;
 }
 
-/* ── Header ── */
 .security-header {
   display: flex;
   align-items: center;
@@ -152,61 +122,21 @@ defineEmits<{
   flex-shrink: 0;
 }
 
-.header-icon {
-  font-size: 1.375rem;
-  color: var(--ag-primary);
-}
+.header-icon { color: var(--ag-primary); }
 
-.header-title {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--ag-text);
-  margin: 0 0 0.25rem;
-}
+.header-title { font-size: 1rem; font-weight: 700; color: var(--ag-text); margin: 0 0 0.25rem; }
+.header-desc { font-size: 0.8rem; color: var(--ag-text-muted); margin: 0; line-height: 1.4; }
 
-.header-desc {
-  font-size: 0.8rem;
-  color: var(--ag-text-muted);
-  margin: 0;
-  line-height: 1.4;
-}
+.card-divider { height: 1px; background: var(--ag-border); margin: 0 1.75rem; }
 
-.header-warning {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  color: var(--ag-yellow);
-}
-
-.warning-icon {
-  font-size: 1rem;
-  flex-shrink: 0;
-}
-
-/* ── Divider ── */
-.card-divider {
-  height: 1px;
-  background: var(--ag-border);
-  margin: 0 1.75rem;
-}
-
-/* ── Keys Grid ── */
 .keys-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1px;
   background: var(--ag-border);
-  transition: opacity 0.3s ease;
 }
 
-.disabled-grid {
-  opacity: 0.4;
-  pointer-events: none;
-}
-
-@media (max-width: 540px) {
-  .keys-grid { grid-template-columns: 1fr; }
-}
+@media (max-width: 540px) { .keys-grid { grid-template-columns: 1fr; } }
 
 .key-tile {
   background: var(--ag-card);
@@ -225,7 +155,6 @@ defineEmits<{
   justify-content: space-between;
 }
 
-/* Icons */
 .tile-icon {
   width: 36px;
   height: 36px;
@@ -233,20 +162,11 @@ defineEmits<{
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.125rem;
 }
 
-.read-icon { 
-  background: rgba(59, 130, 246, 0.12); 
-  color: var(--ag-blue); 
-}
+.read-icon { background: rgba(59,130,246,0.12); color: var(--ag-blue); }
+.write-icon { background: rgba(249,115,22,0.12); color: var(--ag-orange); }
 
-.write-icon { 
-  background: rgba(249, 115, 22, 0.12); 
-  color: var(--ag-orange); 
-}
-
-/* Badges */
 .tile-badge {
   font-size: 0.6rem;
   font-weight: 800;
@@ -255,35 +175,12 @@ defineEmits<{
   border-radius: 6px;
 }
 
-.read-badge {
-  background: rgba(59, 130, 246, 0.1);
-  color: var(--ag-blue);
-  border: 1px solid rgba(59, 130, 246, 0.2);
-}
+.read-badge { background: rgba(59,130,246,0.1); color: var(--ag-blue); border: 1px solid rgba(59,130,246,0.2); }
+.write-badge { background: rgba(249,115,22,0.1); color: var(--ag-orange); border: 1px solid rgba(249,115,22,0.2); }
 
-.write-badge {
-  background: rgba(249, 115, 22, 0.1);
-  color: var(--ag-orange);
-  border: 1px solid rgba(249, 115, 22, 0.2);
-}
+.tile-title { font-size: 0.95rem; font-weight: 700; color: var(--ag-text); margin: 0; }
+.tile-desc { font-size: 0.78rem; color: var(--ag-text-muted); line-height: 1.5; margin: 0; flex-grow: 1; }
 
-/* Text */
-.tile-title {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--ag-text);
-  margin: 0;
-}
-
-.tile-desc {
-  font-size: 0.78rem;
-  color: var(--ag-text-muted);
-  line-height: 1.5;
-  margin: 0;
-  flex-grow: 1;
-}
-
-/* Buttons */
 .tile-btn {
   display: inline-flex;
   align-items: center;
@@ -301,59 +198,29 @@ defineEmits<{
   align-self: flex-start;
 }
 
-.tile-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
+.tile-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
-.read-btn {
-  color: var(--ag-blue);
-  border-color: rgba(59, 130, 246, 0.25);
-}
-.read-btn:hover:not(:disabled) {
-  background: rgba(59, 130, 246, 0.08);
-  border-color: rgba(59, 130, 246, 0.5);
-}
+.read-btn { color: var(--ag-blue); border-color: rgba(59,130,246,0.25); }
+.read-btn:hover:not(:disabled) { background: rgba(59,130,246,0.08); border-color: rgba(59,130,246,0.5); }
 
-.write-btn {
-  color: var(--ag-orange);
-  border-color: rgba(249, 115, 22, 0.25);
-}
-.write-btn:hover:not(:disabled) {
-  background: rgba(249, 115, 22, 0.08);
-  border-color: rgba(249, 115, 22, 0.5);
-}
+.write-btn { color: var(--ag-orange); border-color: rgba(249,115,22,0.25); }
+.write-btn:hover:not(:disabled) { background: rgba(249,115,22,0.08); border-color: rgba(249,115,22,0.5); }
 
-.btn-icon {
-  font-size: 0.85rem;
-  transition: transform 0.2s ease;
-}
+.btn-icon { transition: transform 0.2s; }
 .tile-btn:hover:not(:disabled) .btn-icon { transform: translateX(3px); }
 
-/* ── Footer ── */
 .security-footer {
   display: flex;
   align-items: center;
   gap: 0.6rem;
   padding: 0.9rem 1.75rem;
-  background: rgba(0, 0, 0, 0.25);
+  background: rgba(0,0,0,0.25);
   border-top: 1px solid var(--ag-border);
 }
 
-.footer-icon {
-  font-size: 0.85rem;
-  color: var(--ag-primary);
-  flex-shrink: 0;
-}
+.footer-icon { color: var(--ag-primary); flex-shrink: 0; }
+.footer-text { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.05em; color: var(--ag-text-muted); }
 
-.footer-text {
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  color: var(--ag-text-muted);
-}
-
-/* ── Zone-scoped states ── */
 .scope-tag {
   display: inline-block;
   font-size: 0.6rem;
@@ -367,9 +234,7 @@ defineEmits<{
   align-self: flex-start;
 }
 
-.tile-locked {
-  opacity: 0.45;
-}
+.tile-locked { opacity: 0.45; }
 
 .lock-msg {
   display: flex;
@@ -379,9 +244,5 @@ defineEmits<{
   font-weight: 600;
   color: var(--ag-yellow);
   margin: 0;
-}
-
-.lock-msg ion-icon {
-  font-size: 0.85rem;
 }
 </style>

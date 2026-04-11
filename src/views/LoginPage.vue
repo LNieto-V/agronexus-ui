@@ -1,162 +1,144 @@
-<template>
-  <ion-page>
-    <ion-content :fullscreen="true" class="ion-padding auth-page">
-      <div class="auth-wrapper">
-        <div class="glass-card auth-card">
-          <div class="brand-section">
-            <div class="logo-container">
-              <ion-icon :icon="leafOutline" class="logo-icon animate-pulse" />
-            </div>
-            <h1 class="brand-name">AgroNexus <span class="text-primary">AI</span></h1>
-            <p class="brand-tagline">Secure access to your agricultural protocols</p>
-          </div>
-
-          <form @submit.prevent="handleLogin" class="auth-form">
-            <div class="input-group">
-              <ion-item lines="none" class="glass-input">
-                <ion-icon :icon="mailOutline" slot="start" />
-                <ion-input
-                  v-model="email"
-                  type="email"
-                  placeholder="Email Address"
-                  required
-                ></ion-input>
-              </ion-item>
-            </div>
-
-            <div class="input-group">
-              <ion-item lines="none" class="glass-input">
-                <ion-icon :icon="lockClosedOutline" slot="start" />
-                <ion-input
-                  v-model="password"
-                  type="password"
-                  placeholder="Password"
-                  required
-                ></ion-input>
-              </ion-item>
-            </div>
-
-            <ion-button 
-              expand="block" 
-              type="submit" 
-              class="premium-btn mt-6"
-              :disabled="loading"
-            >
-              <ion-spinner v-if="loading" slot="start" name="crescent"></ion-spinner>
-              <span>{{ loading ? 'Authenticating...' : 'Sign In' }}</span>
-            </ion-button>
-          </form>
-
-          <div class="auth-footer mt-8">
-            <p>Don't have an account?</p>
-            <ion-button fill="clear" router-link="/register" class="text-primary font-bold">
-              Create Account
-            </ion-button>
-          </div>
-        </div>
-      </div>
-    </ion-content>
-  </ion-page>
-</template>
-
 <script setup lang="ts">
-import { 
-  IonPage, IonContent, IonInput, IonButton, 
-  IonIcon, IonItem, IonSpinner, toastController 
-} from '@ionic/vue';
-import { leafOutline, mailOutline, lockClosedOutline } from 'ionicons/icons';
 import { ref } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { useRouter } from 'vue-router';
+import { useToast } from '@/composables/useToast';
+import { Leaf, Mail, Lock } from 'lucide-vue-next';
+import AppSpinner from '@/components/AppSpinner.vue';
 
 const email = ref('');
 const password = ref('');
 const loading = ref(false);
 const authStore = useAuthStore();
 const router = useRouter();
+const { showToast } = useToast();
 
 const handleLogin = async () => {
   loading.value = true;
   try {
     await authStore.signIn({ email: email.value, password: password.value });
-    const toast = await toastController.create({
-      message: 'Welcome back, explorer.',
-      duration: 2000,
-      color: 'success',
-      position: 'bottom',
-      cssClass: 'premium-toast'
-    });
-    await toast.present();
+    showToast('Welcome back, explorer.', 'success', 2000);
     router.replace('/tabs/home');
   } catch (error: any) {
-    const toast = await toastController.create({
-      message: error.message || 'Authentication failed',
-      duration: 3000,
-      color: 'danger',
-      position: 'bottom'
-    });
-    await toast.present();
+    showToast(error.message || 'Authentication failed', 'danger', 3000);
   } finally {
     loading.value = false;
   }
 };
 </script>
 
+<template>
+  <div class="auth-page">
+    <div class="auth-wrapper">
+      <div class="auth-card">
+        <!-- Brand -->
+        <div class="brand-section">
+          <div class="logo-container">
+            <Leaf :size="32" class="text-primary" />
+          </div>
+          <h1 class="brand-name">AgroNexus <span class="text-primary">AI</span></h1>
+          <p class="brand-tagline">Secure access to your agricultural protocols</p>
+        </div>
+
+        <!-- Form -->
+        <form @submit.prevent="handleLogin" class="auth-form" id="login-form">
+          <div class="input-wrap">
+            <Mail :size="18" class="input-icon" />
+            <input
+              id="login-email"
+              v-model="email"
+              type="email"
+              placeholder="Email Address"
+              required
+              autocomplete="email"
+              class="auth-input"
+            />
+          </div>
+
+          <div class="input-wrap">
+            <Lock :size="18" class="input-icon" />
+            <input
+              id="login-password"
+              v-model="password"
+              type="password"
+              placeholder="Password"
+              required
+              autocomplete="current-password"
+              class="auth-input"
+            />
+          </div>
+
+          <button
+            id="login-submit"
+            type="submit"
+            class="premium-btn"
+            :disabled="loading"
+          >
+            <AppSpinner v-if="loading" size="sm" />
+            <span>{{ loading ? 'Authenticating...' : 'Sign In' }}</span>
+          </button>
+        </form>
+
+        <!-- Footer -->
+        <div class="auth-footer">
+          <p>Don't have an account?</p>
+          <RouterLink to="/register" class="link-btn">Create Account</RouterLink>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
 <style scoped>
 .auth-page {
-  --background: radial-gradient(circle at top right, #1a2a1a 0%, #0a0a0a 100%);
-}
-
-.auth-wrapper {
+  min-height: 100vh;
+  background: radial-gradient(circle at top right, #1a2a1a 0%, #09090b 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100%;
+  padding: 1rem;
+}
+
+.auth-wrapper {
+  width: 100%;
+  max-width: 420px;
 }
 
 .auth-card {
-  width: 100%;
-  max-width: 400px;
-  padding: 2.5rem 2rem;
-  text-align: center;
-  backdrop-filter: blur(20px);
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 24px;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+  padding: 2.5rem 2rem;
+  text-align: center;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
 }
 
-.brand-section {
-  margin-bottom: 2.5rem;
-}
+.brand-section { margin-bottom: 2rem; }
 
 .logo-container {
   width: 64px;
   height: 64px;
-  margin: 0 auto 1.5rem;
+  margin: 0 auto 1.25rem;
   background: var(--ag-primary-soft);
   border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.logo-icon {
-  font-size: 32px;
-  color: var(--ag-primary);
+  animation: pulse 4s ease infinite;
 }
 
 .brand-name {
-  font-size: 2rem;
+  font-size: 1.875rem;
   font-weight: 800;
   margin: 0;
-  letter-spacing: -1px;
+  letter-spacing: -0.03em;
 }
 
 .brand-tagline {
-  color: #888;
-  font-size: 0.9rem;
-  margin-top: 0.5rem;
+  color: var(--ag-text-muted);
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0;
 }
 
 .auth-form {
@@ -165,40 +147,86 @@ const handleLogin = async () => {
   gap: 1rem;
 }
 
-.glass-input {
-  --background: rgba(255, 255, 255, 0.05);
-  --border-radius: 12px;
-  --color: white;
-  --placeholder-color: #666;
-  margin-bottom: 0.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.3s ease;
+.input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
 }
 
-.glass-input:focus-within {
+.input-icon {
+  position: absolute;
+  left: 0.875rem;
+  color: var(--ag-text-muted);
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.auth-input {
+  width: 100%;
+  padding: 0.875rem 1rem 0.875rem 2.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: var(--ag-text);
+  font-size: 0.9rem;
+  font-family: var(--ag-font);
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.auth-input::placeholder { color: var(--ag-text-muted); }
+
+.auth-input:focus {
   border-color: var(--ag-primary);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 0 0 3px rgba(var(--ag-primary-rgb), 0.15);
 }
 
 .premium-btn {
-  --background: var(--ag-primary);
-  --background-hover: #45a049;
-  --border-radius: 12px;
-  --box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
   height: 52px;
-  font-weight: 700;
-  text-transform: none;
+  margin-top: 0.5rem;
+  background: var(--ag-primary);
+  border: none;
+  border-radius: 12px;
+  color: white;
   font-size: 1rem;
+  font-weight: 700;
+  font-family: var(--ag-font);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(var(--ag-primary-rgb), 0.3);
 }
+
+.premium-btn:hover:not(:disabled) {
+  background: var(--ag-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 25px rgba(var(--ag-primary-rgb), 0.4);
+}
+
+.premium-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .auth-footer {
-  font-size: 0.9rem;
-  color: #666;
+  margin-top: 2rem;
+  font-size: 0.875rem;
+  color: var(--ag-text-muted);
 }
 
-.animate-pulse {
-  animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+.auth-footer p { margin: 0 0 0.5rem; }
+
+.link-btn {
+  color: var(--ag-primary);
+  font-weight: 700;
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: opacity 0.2s;
 }
+
+.link-btn:hover { opacity: 0.8; }
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }

@@ -2,42 +2,56 @@
   <div class="ag-glass-card skeleton-card p-4">
     <div class="flex items-center justify-between mb-2">
       <div class="flex items-center gap-2">
-        <ion-skeleton-text animated style="width: 24px; height: 24px; border-radius: 4px;"></ion-skeleton-text>
-        <ion-skeleton-text animated style="width: 80px; height: 16px;"></ion-skeleton-text>
+        <div class="skeleton-box" style="width:24px;height:24px;border-radius:4px" />
+        <div class="skeleton-box" style="width:80px;height:16px" />
       </div>
-      <ion-skeleton-text animated style="width: 8px; height: 8px; border-radius: 50%;"></ion-skeleton-text>
+      <div class="skeleton-box" style="width:8px;height:8px;border-radius:50%" />
     </div>
-    
+
     <div class="flex items-baseline gap-1 mt-1">
-      <ion-skeleton-text animated style="width: 60px; height: 32px;"></ion-skeleton-text>
-      <ion-skeleton-text animated style="width: 20px; height: 14px;"></ion-skeleton-text>
+      <div class="skeleton-box" style="width:60px;height:32px" />
+      <div class="skeleton-box" style="width:20px;height:14px" />
     </div>
-    
+
     <div class="mt-3">
-      <div class="h-1 w-full bg-white/10 rounded-full overflow-hidden">
-        <ion-skeleton-text animated style="width: 100%; height: 100%; margin: 0;"></ion-skeleton-text>
-      </div>
+      <div class="skeleton-box" style="width:100%;height:6px;border-radius:9999px" />
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { IonSkeletonText } from '@ionic/vue';
-</script>
 
 <style scoped>
 .skeleton-card {
   min-width: 160px;
   flex: 1;
+  background: var(--ag-card);
+  border: 1px solid var(--ag-border);
+  border-radius: 16px;
 }
 
-.p-4 { padding: 1rem; }
+.skeleton-box {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.04) 25%,
+    rgba(255,255,255,0.08) 50%,
+    rgba(255,255,255,0.04) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
 .flex { display: flex; }
 .items-center { align-items: center; }
+.items-baseline { align-items: baseline; }
 .justify-between { justify-content: space-between; }
 .gap-2 { gap: 0.5rem; }
 .gap-1 { gap: 0.25rem; }
 .mt-1 { margin-top: 0.25rem; }
 .mt-3 { margin-top: 0.75rem; }
 .mb-2 { margin-bottom: 0.5rem; }
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
 </style>

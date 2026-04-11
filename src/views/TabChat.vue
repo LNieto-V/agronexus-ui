@@ -1,30 +1,24 @@
 <script setup lang="ts">
-import { 
-  IonPage, IonHeader, IonToolbar, IonTitle, IonContent, 
-  IonButtons, IonButton, IonIcon, IonFooter, IonInput, 
-  actionSheetController, alertController,
-  IonMenuButton, IonModal, IonInfiniteScroll, IonInfiniteScrollContent
-} from '@ionic/vue';
-import { 
-  sparklesOutline, 
-  trashOutline, 
-  send as sendIcon,
-  addOutline,
-  ellipsisVerticalOutline,
-  pencilOutline,
-  chatbubbleEllipsesOutline,
-  timeOutline,
-  downloadOutline
-} from 'ionicons/icons';
 import { ref, nextTick, onMounted, computed, watch } from 'vue';
 import { useConversationsStore } from '@/stores/conversationsStore';
 import type { Conversation } from '@/types';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
+import {
+  Sparkles, Plus, Clock, MoreVertical,
+  Send, Download, MessageCircle, X, Pencil, Trash2
+} from 'lucide-vue-next';
 
 const store = useConversationsStore();
 const input = ref('');
 const bottomRef = ref<HTMLDivElement | null>(null);
+const sentinelRef = ref<HTMLDivElement | null>(null);
+const historyOpen = ref(false);
+
+// Context menu state
+const ctxMenu = ref<{ conv: Conversation; x: number; y: number } | null>(null);
+const renameDialog = ref<{ conv: Conversation; value: string } | null>(null);
+const deleteDialog = ref<Conversation | null>(null);
 
 const messages = computed(() => store.messages);
 const loading = computed(() => store.isLoading);
@@ -32,34 +26,22 @@ const sending = computed(() => store.isSending);
 const conversations = computed(() => store.conversations);
 const activeSessionId = computed(() => store.activeSessionId);
 const chatHasMore = computed(() => store.chatHasMore);
-const isHistoryModalOpen = ref(false);
 
-const renderMarkdown = (text: string) => { 
-  try { 
-    return DOMPurify.sanitize(marked.parse(text) as string); 
-  } catch (e) { 
-    return DOMPurify.sanitize(text); 
-  } 
+const renderMarkdown = (text: string) => {
+  try {
+    return DOMPurify.sanitize(marked.parse(text) as string);
+  } catch {
+    return DOMPurify.sanitize(text);
+  }
 };
 
 const scrollToBottom = async (behavior: ScrollBehavior = 'smooth') => {
   await nextTick();
-  if (bottomRef.value) {
-    bottomRef.value.scrollIntoView({ behavior });
-  }
+  bottomRef.value?.scrollIntoView({ behavior });
 };
 
-// Auto-scroll when new messages arrive or status changes
-watch([() => messages.value.length, sending, loading], (newVal, oldVal) => {
-  const [newLen, newSending, newLoading] = newVal;
-  const [oldLen, oldSending, oldLoading] = oldVal || [];
-  
-  // If we just added messages AND it's not history loading (history prepends)
-  // Or if we started/stopped sending
-  if (newLen > (oldLen || 0) || newSending !== oldSending || newLoading !== oldLoading) {
-    // Only scroll to bottom if the last message is new (not history prepended)
-    scrollToBottom();
-  }
+watch([() => messages.value.length, sending, loading], () => {
+  scrollToBottom();
 });
 
 onMounted(async () => {
@@ -69,629 +51,543 @@ onMounted(async () => {
   }
   await nextTick();
   setTimeout(() => scrollToBottom('auto'), 100);
-});
 
-async function handleLoadMore(event: any) {
-  await store.loadMoreMessages();
-  event.target.complete();
-  
-  // Optional: preserve scroll position after loading older messages
-  // This is tricky with IonContent, but usually it handles it or we do it manually
-}
+  // IntersectionObserver for infinite scroll (load older messages)
+  if (sentinelRef.value) {
+    const obs = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && chatHasMore.value && !loading.value) {
+        store.loadMoreMessages();
+      }
+    }, { threshold: 0.1 });
+    obs.observe(sentinelRef.value);
+  }
+
+  // Close ctx menu on outside click
+  document.addEventListener('click', closeCtxMenu);
+});
 
 async function handleSend() {
   if (!input.value.trim() || sending.value) return;
-  
   const text = input.value;
   input.value = '';
-
-  if (!store.activeSessionId) {
-    // If no active session, sendMessage will handle auto-creation
-    // but we can give it a title hint if we wanted.
-  }
-  
   await store.sendMessage(text);
 }
 
 async function createNew() {
   await store.createConversation('Nueva conversación');
   input.value = '';
-  isHistoryModalOpen.value = false;
-}
-
-async function toggleHistory() {
-  isHistoryModalOpen.value = !isHistoryModalOpen.value;
+  historyOpen.value = false;
 }
 
 async function selectSession(id: string) {
   await store.selectConversation(id);
-  isHistoryModalOpen.value = false;
+  historyOpen.value = false;
 }
 
-async function showOptions(conv: Conversation) {
-  const actionSheet = await actionSheetController.create({
-    header: conv.title,
-    cssClass: 'premium-action-sheet',
-    buttons: [
-      {
-        text: 'Renombrar',
-        icon: pencilOutline,
-        handler: () => promptRename(conv),
-      },
-      {
-        text: 'Eliminar',
-        icon: trashOutline,
-        role: 'destructive',
-        handler: () => confirmDelete(conv),
-      },
-      { text: 'Cancelar', role: 'cancel' },
-    ],
-  });
-  await actionSheet.present();
+function showOptions(e: MouseEvent, conv: Conversation) {
+  e.stopPropagation();
+  ctxMenu.value = { conv, x: e.clientX, y: e.clientY };
 }
 
-async function promptRename(conv: Conversation) {
-  const alert = await alertController.create({
-    header: 'Renombrar conversación',
-    cssClass: 'premium-alert',
-    inputs: [{ name: 'title', type: 'text', value: conv.title, placeholder: 'Nuevo nombre' }],
-    buttons: [
-      { text: 'Cancelar', role: 'cancel' },
-      {
-        text: 'Guardar',
-        handler: (data) => {
-          if (data.title) store.renameConversation(conv.id, data.title);
-        },
-      },
-    ],
-  });
-  await alert.present();
+function closeCtxMenu() {
+  ctxMenu.value = null;
 }
 
-async function confirmDelete(conv: Conversation) {
-  const alert = await alertController.create({
-    header: '¿Eliminar conversación?',
-    message: `Esta acción no se puede deshacer. Se borrará "${conv.title}".`,
-    cssClass: 'premium-alert',
-    buttons: [
-      { text: 'Cancelar', role: 'cancel' },
-      {
-        text: 'Eliminar',
-        role: 'destructive',
-        handler: () => store.deleteConversation(conv.id),
-      },
-    ],
-  });
-  await alert.present();
+function startRename() {
+  if (!ctxMenu.value) return;
+  renameDialog.value = { conv: ctxMenu.value.conv, value: ctxMenu.value.conv.title };
+  ctxMenu.value = null;
 }
 
-const formatDate = (dateStr: string) => {
-  return new Date(dateStr).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-};
+function startDelete() {
+  if (!ctxMenu.value) return;
+  deleteDialog.value = ctxMenu.value.conv;
+  ctxMenu.value = null;
+}
+
+async function confirmRename() {
+  if (!renameDialog.value || !renameDialog.value.value.trim()) return;
+  await store.renameConversation(renameDialog.value.conv.id, renameDialog.value.value);
+  renameDialog.value = null;
+}
+
+async function confirmDelete() {
+  if (!deleteDialog.value) return;
+  await store.deleteConversation(deleteDialog.value.id);
+  deleteDialog.value = null;
+}
+
+const formatDate = (dateStr: string) =>
+  new Date(dateStr).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
 function printMessage(msgId: string) {
-  const msgElement = document.getElementById(`msg-${msgId}`);
-  if (!msgElement) return;
-
-  // Creamos una ventana temporal para imprimir solo ese mensaje
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) return;
-
-  const content = msgElement.innerHTML;
-  printWindow.document.write(`
+  const el = document.getElementById(`msg-${msgId}`);
+  if (!el) return;
+  const pw = window.open('', '_blank');
+  if (!pw) return;
+  pw.document.write(`
     <html>
-      <head>
-        <title>Reporte AgroNexus AI</title>
-        <style>
-          body { font-family: sans-serif; padding: 40px; color: #333; }
-          h2 { color: #10b981; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-          th { background: #10b981; color: white; padding: 10px; text-align: left; }
-          td { border: 1px solid #eee; padding: 10px; }
-          .meta { font-size: 12px; color: #888; margin-top: 20px; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
-        </style>
-      </head>
-      <body>
-        ${content}
-        <div class="meta">Generado por AgroNexus AI el ${new Date().toLocaleString()}</div>
-      </body>
-    </html>
-  `);
-  printWindow.document.close();
-  printWindow.print();
-  printWindow.close();
+      <head><title>AgroNexus AI Report</title>
+      <style>
+        body{font-family:sans-serif;padding:40px;color:#333}
+        h2{color:#10b981}
+        table{width:100%;border-collapse:collapse;margin-bottom:20px}
+        th{background:#10b981;color:white;padding:10px;text-align:left}
+        td{border:1px solid #eee;padding:10px}
+        .meta{font-size:12px;color:#888;margin-top:20px;text-align:center;border-top:1px solid #eee;padding-top:20px}
+      </style></head>
+      <body>${el.innerHTML}
+        <div class="meta">Generated by AgroNexus AI on ${new Date().toLocaleString()}</div>
+      </body></html>`);
+  pw.document.close();
+  pw.print();
+  pw.close();
 }
 </script>
 
 <template>
-  <ion-page>
-    <!-- GLOBAL APP SIDEBAR (Main Hamburger) - Handled in TabsPage -->
+  <div class="chat-shell">
 
-    <!-- HISTORY MODAL: Access past chats in a clean UI -->
-    <ion-modal 
-      :is-open="isHistoryModalOpen" 
-      @did-dismiss="isHistoryModalOpen = false"
-      class="history-modal"
-      :initial-breakpoint="0.75"
-      :breakpoints="[0, 0.75, 1]"
-    >
-      <ion-header class="ion-no-border">
-        <ion-toolbar class="modal-toolbar px-2">
-          <ion-title>Historial de Chat</ion-title>
-          <ion-buttons slot="end">
-            <ion-button @click="isHistoryModalOpen = false" color="medium">Cerrar</ion-button>
-          </ion-buttons>
-        </ion-toolbar>
-      </ion-header>
-
-      <ion-content class="modal-content">
-        <div class="sidebar-header-actions p-4">
-          <ion-button expand="block" @click="createNew" class="new-chat-btn">
-            <ion-icon slot="start" :icon="addOutline" />
-            Nueva conversación
-          </ion-button>
-        </div>
-
-        <div class="sidebar-scrollable px-4 pb-8">
-          <div v-if="conversations.length === 0" class="empty-sessions py-12">
-             <ion-icon :icon="chatbubbleEllipsesOutline" class="empty-icon text-muted" />
-             <p class="text-muted">No hay chats previos</p>
-          </div>
-          
-          <div class="sessions-list">
-            <div
-              v-for="conv in conversations"
-              :key="conv.id"
-              class="session-item"
-              :class="{ 'active-session': conv.id === activeSessionId }"
-              @click="selectSession(conv.id)"
-            >
-              <div class="session-info">
-                <span class="session-title">{{ conv.title }}</span>
-                <span class="session-date">{{ formatDate(conv.updated_at) }}</span>
-              </div>
-              <ion-button fill="clear" color="medium" size="small" class="session-opts-btn" @click.stop="showOptions(conv)">
-                <ion-icon slot="icon-only" :icon="ellipsisVerticalOutline" />
-              </ion-button>
-            </div>
-          </div>
-        </div>
-      </ion-content>
-    </ion-modal>
-
+    <!-- Main chat area -->
     <div class="chat-main">
-      <ion-header class="ion-no-border">
-        <ion-toolbar class="premium-toolbar">
-          <ion-buttons slot="start">
-            <!-- Botón del menú principal (App Sidebar) -->
-            <ion-menu-button></ion-menu-button>
-            <!-- Botón del historial (Clock Icon) -->
-            <ion-button @click="toggleHistory" class="history-toggle-btn" color="primary">
-              <ion-icon slot="icon-only" :icon="timeOutline" />
-            </ion-button>
-          </ion-buttons>
-          
-          <ion-title>
-            <div class="toolbar-title-content">
-              <span v-if="activeSessionId" class="session-name">
-                {{ conversations.find(c => c.id === activeSessionId)?.title || 'Chat' }}
-              </span>
-              <span v-else class="app-name">AgroNexus AI</span>
-            </div>
-          </ion-title>
-          
-          <ion-buttons slot="end">
-            <ion-button @click="createNew" class="hide-on-mobile" color="primary">
-              <ion-icon slot="start" :icon="addOutline" />
-              Nuevo
-            </ion-button>
-          </ion-buttons>
-        </ion-toolbar>
-      </ion-header>
+      <!-- Toolbar -->
+      <div class="chat-toolbar">
+        <div class="ag-flex-row gap-2">
+          <button id="history-toggle-btn" class="icon-btn text-primary" @click="historyOpen = true" title="Chat history">
+            <Clock :size="18" />
+          </button>
+        </div>
+        <div class="toolbar-center">
+          <span v-if="activeSessionId" class="session-name">
+            {{ conversations.find(c => c.id === activeSessionId)?.title || 'Chat' }}
+          </span>
+          <span v-else class="app-name ag-text-gradient">AgroNexus AI</span>
+        </div>
+        <button id="new-chat-top-btn" class="new-btn hide-on-mobile" @click="createNew">
+          <Plus :size="16" />
+          <span>Nuevo</span>
+        </button>
+      </div>
 
-      <ion-content :fullscreen="true" class="chat-content-bg">
+      <!-- Messages area -->
+      <div class="chat-scroll" id="chat-messages-area">
         <div class="chat-container">
-          <!-- Welcome Message -->
+          <!-- Welcome -->
           <div v-if="messages.length === 0 && !loading" class="welcome-container">
-            <div class="welcome-icon-box">
-              <ion-icon :icon="sparklesOutline" />
+            <div class="welcome-icon">
+              <Sparkles :size="32" class="text-primary" />
             </div>
             <h1>Hi, I'm AgroNexus</h1>
-            <p>
-              Your personal agricultural assistant. Ask me about your telemetry data, system health, or recommendations for crop optimization.
-            </p>
+            <p>Your personal agricultural assistant. Ask about telemetry, system health, or crop recommendations.</p>
           </div>
 
-          <!-- Chat History -->
-          <div class="messages-list" :key="activeSessionId || 'empty'">
-            <ion-infinite-scroll 
-              position="top" 
-              @ionInfinite="handleLoadMore($event)"
-              :disabled="!chatHasMore"
-            >
-              <ion-infinite-scroll-content loading-spinner="crescent"></ion-infinite-scroll-content>
-            </ion-infinite-scroll>
+          <!-- Infinite scroll sentinel (at top) -->
+          <div ref="sentinelRef" class="scroll-sentinel-top" />
 
-            <div v-for="msg in messages" :key="msg.id" :class="['message-wrapper', msg.role]" :id="'msg-' + msg.id">
-              <div class="message-bubble">
-                <div class="markdown-body" v-html="renderMarkdown(msg.message)"></div>
-              </div>
-              <div class="message-meta ag-flex-row ag-flex-between">
-                <span>{{ msg.role === 'user' ? 'You' : 'AgroNexus' }} &bull; {{ new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</span>
-                <ion-button v-if="msg.role === 'ai'" fill="clear" size="small" class="msg-download-btn no-print" @click="printMessage(msg.id)">
-                  <ion-icon :icon="downloadOutline" slot="icon-only" />
-                </ion-button>
-              </div>
+          <!-- Messages -->
+          <div v-for="msg in messages" :key="msg.id" class="message-wrapper" :class="msg.role" :id="`msg-${msg.id}`">
+            <div class="message-bubble">
+              <div class="markdown-body" v-html="renderMarkdown(msg.message)" />
             </div>
-
-            <!-- Loading / Typing Indicator -->
-            <div v-if="loading || sending" class="message-wrapper ai">
-              <div class="message-bubble typing-bubble">
-                 <div class="typing-indicator">
-                   <span></span><span></span><span></span>
-                 </div>
-              </div>
+            <div class="message-meta">
+              <span>{{ msg.role === 'user' ? 'You' : 'AgroNexus' }} · {{ new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</span>
+              <button v-if="msg.role === 'ai'" class="dl-btn no-print" @click="printMessage(msg.id)" title="Export">
+                <Download :size="13" />
+              </button>
             </div>
-            
-            <div ref="bottomRef" class="scroll-anchor"></div>
           </div>
+
+          <!-- Typing indicator -->
+          <div v-if="loading || sending" class="message-wrapper ai">
+            <div class="message-bubble typing-bubble">
+              <div class="typing-indicator">
+                <span /><span /><span />
+              </div>
+            </div>
+          </div>
+
+          <div ref="bottomRef" class="scroll-anchor" />
         </div>
-      </ion-content>
+      </div>
 
-      <ion-footer class="ion-no-border chat-footer">
+      <!-- Input footer -->
+      <div class="chat-footer">
         <div class="input-container">
           <div class="input-card">
-            <ion-input 
-              v-model="input" 
-              placeholder="Ask AgroNexus..." 
-              @keyup.enter="handleSend" 
-              class="premium-input" 
+            <input
+              id="chat-input"
+              v-model="input"
+              type="text"
+              placeholder="Ask AgroNexus..."
+              class="chat-input"
               :disabled="sending"
-            ></ion-input>
-            <ion-button @click="handleSend" fill="clear" :disabled="sending || !input.trim()" class="send-btn">
-               <div class="send-icon-box" :class="{ 'active': input.trim() && !sending }">
-                 <ion-icon :icon="sendIcon" />
-               </div>
-            </ion-button>
+              @keyup.enter="handleSend"
+            />
+            <button
+              id="chat-send-btn"
+              class="send-btn"
+              @click="handleSend"
+              :disabled="sending || !input.trim()"
+            >
+              <div class="send-icon-box" :class="{ active: input.trim() && !sending }">
+                <Send :size="18" />
+              </div>
+            </button>
           </div>
         </div>
-      </ion-footer>
+      </div>
     </div>
-  </ion-page>
+
+    <!-- Mobile History Drawer -->
+    <Teleport to="body">
+      <Transition name="drawer">
+        <div v-if="historyOpen" class="drawer-overlay" @click="historyOpen = false">
+          <div class="history-drawer" @click.stop>
+            <div class="drawer-header">
+              <span class="drawer-title">Historial de Chat</span>
+              <button class="icon-btn" @click="historyOpen = false"><X :size="18" /></button>
+            </div>
+            <button class="mobile-new-btn" @click="createNew">
+              <Plus :size="16" /> Nueva conversación
+            </button>
+            <div class="drawer-list">
+              <div
+                v-for="conv in conversations"
+                :key="conv.id"
+                class="conv-item"
+                :class="{ 'is-active': conv.id === activeSessionId }"
+                @click="selectSession(conv.id)"
+              >
+                <div class="conv-item-info">
+                  <span class="conv-title">{{ conv.title }}</span>
+                  <span class="conv-date">{{ formatDate(conv.updated_at) }}</span>
+                </div>
+                <button class="conv-opts-btn" @click="showOptions($event, conv)"><MoreVertical :size="15" /></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Context Menu -->
+    <Teleport to="body">
+      <div
+        v-if="ctxMenu"
+        class="ctx-menu"
+        :style="{ top: `${ctxMenu.y}px`, left: `${ctxMenu.x}px` }"
+        @click.stop
+      >
+        <button class="ctx-item" @click="startRename"><Pencil :size="14" /> Renombrar</button>
+        <button class="ctx-item danger" @click="startDelete"><Trash2 :size="14" /> Eliminar</button>
+      </div>
+    </Teleport>
+
+    <!-- Rename Dialog -->
+    <Teleport to="body">
+      <div v-if="renameDialog" class="dialog-backdrop" @click="renameDialog = null">
+        <div class="dialog-box" @click.stop>
+          <h3>Renombrar conversación</h3>
+          <input
+            id="rename-input"
+            v-model="renameDialog.value"
+            type="text"
+            class="dialog-input"
+            placeholder="Nuevo nombre"
+            @keyup.enter="confirmRename"
+          />
+          <div class="dialog-actions">
+            <button class="dialog-cancel" @click="renameDialog = null">Cancelar</button>
+            <button class="dialog-confirm" @click="confirmRename">Guardar</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Delete Confirm Dialog -->
+    <Teleport to="body">
+      <div v-if="deleteDialog" class="dialog-backdrop" @click="deleteDialog = null">
+        <div class="dialog-box" @click.stop>
+          <h3>¿Eliminar conversación?</h3>
+          <p class="dialog-desc">Esta acción no se puede deshacer. Se borrará "{{ deleteDialog.title }}".</p>
+          <div class="dialog-actions">
+            <button class="dialog-cancel" @click="deleteDialog = null">Cancelar</button>
+            <button class="dialog-confirm danger" @click="confirmDelete">Eliminar</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+  </div>
 </template>
 
 <style scoped>
-
-.history-modal {
-  --background: var(--ag-card-soft);
-  --border-radius: 24px;
-}
-
-.modal-toolbar {
-  --background: var(--ag-card-soft);
-  --padding-top: 1rem;
-}
-
-.sidebar-toolbar ion-title {
-  font-size: 0.85rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-.sidebar-header-actions {
-  padding: 0 1rem 1rem;
-}
-
-.new-chat-btn {
-  --border-radius: 12px;
-  --background: var(--ag-card);
-  --color: var(--ag-text);
-  --border-color: var(--ag-border);
-  --border-style: solid;
-  --border-width: 1px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.sidebar-scrollable {
-  padding: 0 0.75rem 1.5rem;
-}
-
-.sessions-list {
+.chat-shell {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  height: 100%;
+  overflow: hidden;
+  background: var(--ag-bg);
 }
 
-.session-item {
-  padding: 0.75rem 0.75rem 0.75rem 1rem;
-  border-radius: 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  position: relative;
-  transition: all 0.2s ease;
-  background: transparent;
-  border-left: 3px solid transparent; /* Placeholder for active indicator */
-}
-
-.session-item:hover {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.active-session {
-  background: rgba(var(--ag-primary-rgb), 0.08);
-  border-left-color: var(--ag-primary) !important;
-  box-shadow: -10px 0 20px -10px rgba(var(--ag-primary-rgb), 0.3);
-}
-
-.session-info {
+/* ── Main chat ── */
+.chat-main {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
-}
-
-.session-title {
-  font-size: 0.9rem;
-  font-weight: 600;
-  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--ag-text-muted);
 }
 
-.active-session .session-title {
-  color: var(--ag-primary);
-}
-
-.session-date {
-  font-size: 0.7rem;
-  opacity: 0.4;
-}
-
-.session-opts-btn {
-  --color: var(--ag-text-muted);
-  --padding-start: 0;
-  --padding-end: 0;
-  margin: 0;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.session-item:hover .session-opts-btn,
-.active-session .session-opts-btn {
-  opacity: 1;
-}
-
-/* Chat Content Styling */
-.chat-main {
-  width: 100%;
-  height: 100%;
+/* ─ Toolbar ─ */
+.chat-toolbar {
   display: flex;
-  flex-direction: column;
-  position: relative;
-  min-width: 0;
+  align-items: center;
+  padding: 0.75rem 1rem;
   background: var(--ag-bg);
-}
-
-.premium-toolbar {
-  --background: var(--ag-bg);
-  --border-style: none;
   border-bottom: 1px solid var(--ag-border);
-  --padding-start: 0.5rem;
-  --padding-end: 1rem;
+  flex-shrink: 0;
+  gap: 0.75rem;
 }
 
-.history-toggle-btn {
-  --color: var(--ag-text-muted);
-}
-
-.toolbar-title-content {
-  display: flex;
-  flex-direction: column;
+.toolbar-center {
+  flex: 1;
+  text-align: center;
 }
 
 .session-name {
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 700;
-  color: var(--ag-text);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .app-name {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 800;
-  background: linear-gradient(135deg, var(--ag-primary) 0%, #3b82f6 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
 }
 
-.chat-content-bg {
-  --background: var(--ag-bg);
+.icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--ag-text-muted);
+  cursor: pointer;
+  padding: 0.375rem;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.icon-btn:hover { background: var(--ag-card); color: var(--ag-text); }
+
+.new-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(var(--ag-primary-rgb), 0.1);
+  border: 1px solid rgba(var(--ag-primary-rgb), 0.2);
+  border-radius: 8px;
+  color: var(--ag-primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-family: var(--ag-font);
+  padding: 0.4rem 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.new-btn:hover { background: rgba(var(--ag-primary-rgb), 0.18); }
+
+/* ─ Chat scroll ─ */
+.chat-scroll {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--ag-bg);
 }
 
 .chat-container {
-  max-width: 800px;
+  max-width: 780px;
   margin: 0 auto;
-  padding: 1.5rem 1rem;
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
+  padding: 1.5rem 1rem 2rem;
 }
 
+.scroll-sentinel-top { height: 1px; }
+.scroll-anchor { height: 1px; }
+
+/* ─ Welcome ─ */
 .welcome-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
   text-align: center;
-  padding: 4rem 1rem;
-  gap: 1.5rem;
+  padding: 4rem 2rem;
+  max-width: 480px;
+  margin: 0 auto;
 }
 
-.welcome-icon-box {
-  width: 64px;
-  height: 64px;
+.welcome-icon {
+  width: 72px;
+  height: 72px;
   background: rgba(var(--ag-primary-rgb), 0.1);
-  color: var(--ag-primary);
   border-radius: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2rem;
+  margin: 0 auto 1.5rem;
 }
 
 .welcome-container h1 {
-  font-size: 2rem;
+  font-size: 1.875rem;
   font-weight: 800;
-  margin: 0;
+  margin: 0 0 0.75rem;
+  letter-spacing: -0.03em;
 }
 
 .welcome-container p {
-  font-size: 1.1rem;
   color: var(--ag-text-muted);
-  max-width: 450px;
   line-height: 1.6;
 }
 
-.messages-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  padding-bottom: 2rem;
-  animation: chatFadeIn 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes chatFadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
+/* ─ Messages ─ */
 .message-wrapper {
   display: flex;
   flex-direction: column;
-  max-width: 85%;
-  animation: slideUp 0.3s ease-out;
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  margin-bottom: 1rem;
+  max-width: 80%;
 }
 
 .message-wrapper.user {
   align-self: flex-end;
+  margin-left: auto;
 }
 
 .message-wrapper.ai {
   align-self: flex-start;
+  margin-right: auto;
 }
 
 .message-bubble {
-  padding: 1rem 1.25rem;
   border-radius: 18px;
-  line-height: 1.5;
-  font-size: 1rem;
+  padding: 0.875rem 1.125rem;
+  font-size: 0.9rem;
+  line-height: 1.6;
 }
 
-.user .message-bubble {
-  background: var(--ag-primary);
-  color: white;
+.message-wrapper.user .message-bubble {
+  background: rgba(var(--ag-primary-rgb), 0.15);
+  border: 1px solid rgba(var(--ag-primary-rgb), 0.25);
   border-bottom-right-radius: 4px;
 }
 
-.ai .message-bubble {
+.message-wrapper.ai .message-bubble {
   background: var(--ag-card);
   border: 1px solid var(--ag-border);
-  color: var(--ag-text);
   border-bottom-left-radius: 4px;
 }
 
 .message-meta {
-  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.68rem;
   color: var(--ag-text-muted);
-  margin-top: 0.5rem;
-  padding: 0 0.5rem;
+  margin-top: 0.3rem;
+  padding: 0 0.25rem;
 }
 
-.user .message-meta { text-align: right; }
-
-/* Typing Indicator */
-.typing-bubble {
-  padding: 0.75rem 1.25rem;
+.dl-btn {
+  background: transparent;
+  border: none;
+  color: var(--ag-text-muted);
+  cursor: pointer;
+  padding: 0.2rem;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: all 0.2s;
 }
+
+.dl-btn:hover { color: var(--ag-primary); }
+
+/* ─ Typing ─ */
+.typing-bubble { padding: 0.875rem 1.125rem; }
 
 .typing-indicator {
   display: flex;
-  gap: 4px;
   align-items: center;
-  height: 20px;
+  gap: 4px;
+  height: 16px;
 }
 
 .typing-indicator span {
   width: 6px;
   height: 6px;
-  background: var(--ag-text-muted);
   border-radius: 50%;
-  animation: typing 1.4s infinite ease-in-out both;
+  background: var(--ag-primary);
+  animation: bounce 1.2s ease infinite;
 }
 
-.typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
-.typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
 
-@keyframes typing {
-  0%, 80%, 100% { transform: scale(0); opacity: 0.4; }
-  40% { transform: scale(1); opacity: 1; }
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); opacity: 0.5; }
+  50% { transform: translateY(-5px); opacity: 1; }
 }
 
-.scroll-anchor { height: 1px; }
-
-/* Footer & Input */
+/* ─ Input footer ─ */
 .chat-footer {
-  background: transparent;
-  padding-bottom: env(safe-area-inset-bottom, 1rem);
+  padding: 0.75rem 1rem;
+  background: var(--ag-bg);
+  border-top: 1px solid var(--ag-border);
+  flex-shrink: 0;
 }
 
-.input-container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 0.5rem 1rem 1rem;
-}
+.input-container { max-width: 780px; margin: 0 auto; }
 
 .input-card {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--ag-border);
-  border-radius: 20px;
   display: flex;
   align-items: center;
-  padding: 0.25rem 0.25rem 0.25rem 1rem;
   gap: 0.5rem;
+  background: var(--ag-card);
+  border: 1px solid var(--ag-border);
+  border-radius: 16px;
+  padding: 0.25rem 0.25rem 0.25rem 1rem;
+  transition: border-color 0.2s;
 }
 
-.premium-input {
-  --color: var(--ag-text);
-  --placeholder-color: var(--ag-text-muted);
-  font-size: 1rem;
+.input-card:focus-within { border-color: rgba(var(--ag-primary-rgb), 0.4); }
+
+.chat-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--ag-text);
+  font-size: 0.9rem;
+  font-family: var(--ag-font);
+  outline: none;
+  padding: 0.5rem 0;
 }
+
+.chat-input::placeholder { color: var(--ag-text-muted); }
+.chat-input:disabled { opacity: 0.5; }
 
 .send-btn {
-  --padding-start: 0;
-  --padding-end: 0;
-  margin: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
 }
 
+.send-btn:disabled { cursor: not-allowed; }
+
 .send-icon-box {
-  width: 40px;
-  height: 40px;
-  border-radius: 14px;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--ag-card);
+  background: rgba(255,255,255,0.05);
   color: var(--ag-text-muted);
   transition: all 0.2s ease;
 }
@@ -702,73 +598,249 @@ function printMessage(msgId: string) {
   box-shadow: 0 4px 12px rgba(var(--ag-primary-rgb), 0.3);
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@media (min-width: 768px) {
-}
-
-.hide-on-mobile {
-  display: none;
-}
-@media (min-width: 768px) {
-  .hide-on-mobile { display: block; }
-}
-
-.hide-on-desktop {
-  display: block;
-}
-@media (min-width: 768px) {
-  .hide-on-desktop { display: none; }
-}
-
-/* Markdown Contextual Fixes */
-:deep(.markdown-body) {
-  font-size: 1rem;
-  line-height: 1.6;
-}
-
-.user :deep(.markdown-body) {
-  color: white;
-}
-
-.user :deep(.markdown-body code) {
-  background: rgba(0, 0, 0, 0.2);
-  border: none;
-  color: white;
-}
-
-.empty-sessions {
+/* ─ Mobile drawer ─ */
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(0,0,0,0.7);
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 4rem 1rem;
-  text-align: center;
-  opacity: 0.3;
+  padding: 1rem;
 }
 
-.empty-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-}
-.msg-download-btn {
-  --color: var(--ag-primary);
-  margin: 0;
-  height: 20px;
-  width: 20px;
-  opacity: 0.4;
-  transition: opacity 0.3s ease;
+.history-drawer {
+  width: 100%;
+  max-width: 400px;
+  max-height: 80vh;
+  background: var(--ag-card);
+  border-radius: 24px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.message-wrapper:hover .msg-download-btn {
-  opacity: 1;
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--ag-border);
+  flex-shrink: 0;
 }
 
-@media print {
-  .no-print { display: none !important; }
+.drawer-title {
+  font-size: 0.875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
+
+.mobile-new-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: calc(100% - 3rem);
+  margin: 1rem 1.5rem 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--ag-bg);
+  border: 1px solid var(--ag-border);
+  border-radius: 12px;
+  color: var(--ag-text);
+  font-weight: 600;
+  font-family: var(--ag-font);
+  cursor: pointer;
+}
+
+.drawer-list { flex: 1; overflow-y: auto; padding: 0.5rem 1rem 2rem; }
+
+.conv-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  margin-bottom: 2px;
+}
+
+.conv-item:hover { background: rgba(255,255,255,0.04); }
+.conv-item.is-active { background: rgba(var(--ag-primary-rgb), 0.08); border: 1px solid rgba(var(--ag-primary-rgb), 0.15); }
+
+.conv-item-info { flex: 1; min-width: 0; }
+.conv-title {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ag-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conv-date {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--ag-text-muted);
+  margin-top: 2px;
+}
+
+.conv-opts-btn {
+  background: transparent;
+  border: none;
+  color: var(--ag-text-muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  opacity: 0.5;
+  transition: all 0.15s;
+}
+
+.conv-item:hover .conv-opts-btn { opacity: 1; }
+.conv-opts-btn:hover { background: rgba(255,255,255,0.08); color: var(--ag-text); }
+
+/* ─ Context Menu ─ */
+.ctx-menu {
+  position: fixed;
+  z-index: 5000;
+  background: var(--ag-card);
+  border: 1px solid var(--ag-border);
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+  overflow: hidden;
+  min-width: 150px;
+}
+
+.ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  color: var(--ag-text);
+  font-size: 0.875rem;
+  font-family: var(--ag-font);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.ctx-item:hover { background: rgba(255,255,255,0.06); }
+.ctx-item.danger { color: var(--ag-red); }
+.ctx-item.danger:hover { background: rgba(239,68,68,0.08); }
+
+/* ─ Dialogs ─ */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  background: rgba(0,0,0,0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  backdrop-filter: blur(4px);
+}
+
+.dialog-box {
+  background: var(--ag-card);
+  border: 1px solid var(--ag-border);
+  border-radius: 20px;
+  padding: 1.75rem;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+}
+
+.dialog-box h3 { margin: 0 0 1.25rem; font-size: 1.1rem; font-weight: 700; }
+
+.dialog-desc { font-size: 0.875rem; color: var(--ag-text-muted); margin: 0 0 1.25rem; }
+
+.dialog-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--ag-border);
+  border-radius: 10px;
+  color: var(--ag-text);
+  font-family: var(--ag-font);
+  font-size: 0.9rem;
+  outline: none;
+  margin-bottom: 1.25rem;
+}
+
+.dialog-input:focus { border-color: var(--ag-primary); }
+
+.dialog-actions { display: flex; justify-content: flex-end; gap: 0.75rem; }
+
+.dialog-cancel {
+  background: transparent;
+  border: 1px solid var(--ag-border);
+  border-radius: 10px;
+  color: var(--ag-text-muted);
+  padding: 0.625rem 1.25rem;
+  font-family: var(--ag-font);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dialog-confirm {
+  background: var(--ag-primary);
+  border: none;
+  border-radius: 10px;
+  color: white;
+  padding: 0.625rem 1.25rem;
+  font-family: var(--ag-font);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dialog-confirm.danger { background: var(--ag-red); }
+
+/* ─ Transitions ─ */
+.drawer-enter-active, .drawer-leave-active { transition: opacity 0.25s; }
+.drawer-enter-active .history-drawer, .drawer-leave-active .history-drawer { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) scale 0.3s; }
+.drawer-enter-from, .drawer-leave-to { opacity: 0; }
+.drawer-enter-from .history-drawer, .drawer-leave-to .history-drawer { transform: translateY(20px) scale(0.95); opacity: 0; }
+
+/* ─ Markdown body ─ */
+.markdown-body { color: var(--ag-text); line-height: 1.6; font-size: 0.9rem; }
+.markdown-body :deep(h1), .markdown-body :deep(h2), .markdown-body :deep(h3) {
+  color: #fff; font-weight: 800; margin: 1.5rem 0 0.75rem; letter-spacing: -0.02em;
+}
+.markdown-body :deep(h2) { font-size: 1.3rem; color: var(--ag-primary); }
+.markdown-body :deep(p) { margin-bottom: 0.875rem; }
+.markdown-body :deep(ul), .markdown-body :deep(ol) { margin-bottom: 1rem; padding-left: 1.25rem; }
+.markdown-body :deep(li) { margin-bottom: 0.35rem; }
+.markdown-body :deep(code) {
+  background: rgba(0,0,0,0.3); padding: 0.15rem 0.35rem; border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.85em;
+}
+.markdown-body :deep(pre) {
+  background: rgba(0,0,0,0.3); border: 1px solid var(--ag-border);
+  border-radius: 10px; padding: 1rem; overflow-x: auto; margin-bottom: 1rem;
+}
+.markdown-body :deep(pre code) { background: none; padding: 0; }
+.markdown-body :deep(table) {
+  width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 1.5rem;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 10px; overflow: hidden;
+}
+.markdown-body :deep(th) {
+  background: rgba(var(--ag-primary-rgb), 0.1); color: var(--ag-primary);
+  font-weight: 700; padding: 0.625rem 1rem; font-size: 0.8rem; text-transform: uppercase;
+}
+.markdown-body :deep(td) { padding: 0.625rem 1rem; border-top: 1px solid rgba(255,255,255,0.05); font-size: 0.85rem; }
+.markdown-body :deep(blockquote) {
+  margin: 1rem 0; padding: 0.875rem 1.25rem; background: rgba(255,255,255,0.03);
+  border-left: 3px solid var(--ag-primary); border-radius: 0 8px 8px 0;
+}
+.markdown-body :deep(strong) { color: #fff; }
 </style>
-
