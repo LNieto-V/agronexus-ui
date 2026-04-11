@@ -226,10 +226,84 @@ export const useConversationsStore = defineStore('conversations', () => {
     }
   }
 
+  async function generateDiagnosticReport(zone_id: string | null, hours: number, focus: string) {
+    if (!activeSessionId.value) {
+      try {
+        const focusLabels: Record<string, string> = { general: 'General', nutrition: 'Nutrición', clima: 'Clima', riego: 'Riego' };
+        const label = focusLabels[focus] || 'General';
+        await createConversation(`Informe ${label} - ${new Date().toLocaleDateString()}`);
+      } catch (err) {
+        console.error('Failed to create conversation for report:', err);
+      }
+    }
+
+    const promptText = `Genera un informe para la zona: ${zone_id ? zone_id : 'todas'}, últimas ${hours}h, enfoque: ${focus}.`;
+    const userMsg: ChatMessage = {
+      id: Date.now().toString(),
+      role: 'user',
+      message: promptText,
+      created_at: new Date().toISOString(),
+      session_id: activeSessionId.value,
+    };
+    messages.value = [...messages.value, userMsg];
+    isSending.value = true;
+    error.value = null;
+
+    try {
+      const response = await chatService.generateReport({
+        zone_id,
+        hours,
+        focus,
+        session_id: activeSessionId.value
+      });
+      const reportText = response.data.response;
+
+      const aiMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'ai',
+        message: reportText,
+        created_at: new Date().toISOString(),
+        session_id: activeSessionId.value,
+      };
+      messages.value = [...messages.value, aiMsg];
+
+      if (activeSessionId.value) {
+        const conv = conversations.value.find(c => c.id === activeSessionId.value);
+        if (conv) {
+          conv.updated_at = new Date().toISOString();
+          conversations.value.sort((a, b) =>
+            new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+          );
+        }
+      }
+      return activeSessionId.value;
+    } catch (err: any) {
+      const is429 = err.response?.status === 429;
+      const errMsg = is429
+        ? 'El servicio de IA está al máximo de capacidad. Reintenta en unos segundos.'
+        : 'Error al generar el informe.';
+
+      error.value = errMsg;
+      if (is429) showToast(errMsg, 'warning', 5000);
+
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 2).toString(),
+        role: 'ai',
+        message: `> **Error**: ${errMsg}`,
+        created_at: new Date().toISOString(),
+        session_id: activeSessionId.value,
+      };
+      messages.value = [...messages.value, errorMessage];
+      throw err;
+    } finally {
+      isSending.value = false;
+    }
+  }
+
   return {
     conversations, activeSessionId, messages, isLoading, isSending, error,
     fetchConversations, createConversation, selectConversation,
     renameConversation, deleteConversation, clearActiveSession,
-    sendMessage, loadMoreMessages, chatHasMore,
+    sendMessage, loadMoreMessages, chatHasMore, generateDiagnosticReport,
   };
 });

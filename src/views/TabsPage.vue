@@ -6,7 +6,7 @@ import { useIotStore } from '@/stores/iotStore';
 import { useTelemetrySSE } from '@/composables/useTelemetrySSE';
 import {
   Home, Thermometer, MessageCircle, Radio,
-  FileText, LogOut, Menu, X, Leaf
+  LogOut, Menu, X, Leaf
 } from 'lucide-vue-next';
 
 const route = useRoute();
@@ -22,7 +22,6 @@ const navItems = [
   { path: '/tabs/dashboard', label: 'Telemetry', icon: Thermometer },
   { path: '/tabs/assistant', label: 'AI Assistant', icon: MessageCircle },
   { path: '/tabs/control', label: 'Systems', icon: Radio },
-  { path: '/tabs/reports', label: 'Informes', icon: FileText },
 ];
 
 const isXl = ref(false);

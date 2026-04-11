@@ -9,12 +9,14 @@ import SkeletonCard from '@/components/SkeletonCard.vue';
 import SegmentedControl from '@/components/SegmentedControl.vue';
 import AppSelect from '@/components/AppSelect.vue';
 import AppSpinner from '@/components/AppSpinner.vue';
+import ReportGenerator from '@/components/ReportGenerator.vue';
 
 const telemetryStore = useTelemetryStore();
 const iotStore = useIotStore();
 
 const chartView = ref('Temperatura');
 const chartOptions = ['Temperatura', 'Humedad', 'pH', 'EC', 'CO₂'];
+const reportModalOpen = ref(false);
 
 onMounted(() => {
   telemetryStore.fetchLatest(iotStore.selectedZoneId);
@@ -132,6 +134,9 @@ async function exportHistory() {
           <button id="export-data-btn" class="icon-btn" @click="exportHistory" title="Export CSV">
             <Download :size="18" />
           </button>
+          <button class="icon-btn text-primary" @click="reportModalOpen = true" title="Generar Informe IA">
+            <Sparkles :size="18" />
+          </button>
         </div>
       </div>
 
@@ -176,6 +181,8 @@ async function exportHistory() {
       </div>
 
     </div>
+    
+    <ReportGenerator :is-open="reportModalOpen" @close="reportModalOpen = false" />
   </div>
 </template>
 
