@@ -29,6 +29,7 @@ graph TB
         ChatAPI["POST /chat<br/>GET /chat/history"]
         IoTAPI["POST /iot/telemetry<br/>GET /iot/stream (SSE)"]
         ZonesAPI["CRUD /zones/"]
+        Hardware["🔌 Firmware ESP32-C6<br/>(Local Node)"]
     end
 
     subgraph DB["🗄️ Supabase (PostgreSQL)"]
@@ -268,6 +269,7 @@ sequenceDiagram
 | `iotService.deleteZone` | `DELETE` | `zones/{id}/` | — |
 | `iotService.getActuatorLog` | `GET` | `dashboard/actuator-log` | ✅ |
 | `systemService.generateApiKey` | `POST` | `auth/keys` | ✅ |
+| `firmware.source` | `N/A` | `firmware/agronexus_esp32c6.ino` | — |
 
 ---
 
