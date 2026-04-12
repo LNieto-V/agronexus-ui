@@ -215,8 +215,9 @@ async function handleLogout() {
 }
 
 .brand-name {
-  font-size: 1rem;
-  font-weight: 900;
+  font-family: var(--ag-font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
   margin: 0;
   letter-spacing: -0.02em;
   color: var(--ag-text);

@@ -45,7 +45,7 @@ const handleRegister = async () => {
           <div class="logo-container">
             <Sparkles :size="32" class="text-primary" />
           </div>
-          <h1 class="brand-name">Join <span class="text-primary">AgroNexus</span></h1>
+          <h1 class="brand-name font-display">Join <span class="text-primary">AgroNexus</span></h1>
           <p class="brand-tagline">Start your agricultural optimization journey</p>
         </div>
 
@@ -138,13 +138,13 @@ const handleRegister = async () => {
 }
 
 .auth-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(46, 52, 71, 0.4);
+  box-shadow: inset 0 1px 0 rgba(78, 222, 163, 0.1), 0 30px 60px rgba(0, 79, 52, 0.08);
+  backdrop-filter: blur(30px);
+  border: none;
   border-radius: 24px;
-  padding: 2.5rem 2rem;
+  padding: 3rem 2.5rem;
   text-align: center;
-  backdrop-filter: blur(20px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
 }
 
 .brand-section { margin-bottom: 2rem; }

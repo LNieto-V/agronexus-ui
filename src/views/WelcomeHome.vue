@@ -45,8 +45,8 @@ const navigateTo = (path: string) => router.push(path);
 
       <!-- Welcome Header -->
       <div class="mb-10 animate-fade-in">
-        <h2 class="text-muted text-xs font-bold uppercase tracking-widest mb-2">{{ greeting }}</h2>
-        <h1 class="text-4xl font-black tracking-tight">
+        <h2 class="text-muted text-xs font-bold uppercase tracking-widest mb-2 font-display">{{ greeting }}</h2>
+        <h1 class="text-4xl font-black tracking-tight font-display">
           Hola, <span class="ag-text-gradient">{{ authStore.userDisplayName }}</span>!
         </h1>
         <p class="text-muted mt-2 text-lg">Aquí está el resumen de tu sistema hoy.</p>

@@ -6,7 +6,7 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import {
   Sparkles, Plus, Clock, MoreVertical,
-  Send, Download, MessageCircle, X, Pencil, Trash2, FileText
+  Send, X, Pencil, Trash2, FileText
 } from 'lucide-vue-next';
 import ReportGenerator from '@/components/ReportGenerator.vue';
 import ExportPdfButton from '@/components/ExportPdfButton.vue';
@@ -161,7 +161,7 @@ const formatDate = (dateStr: string) =>
             <div class="welcome-icon">
               <Sparkles :size="32" class="text-primary" />
             </div>
-            <h1>Hi, I'm AgroNexus</h1>
+            <h1 class="font-display">Hi, I'm AgroNexus</h1>
             <p>Your personal agricultural assistant. Ask about telemetry, system health, or crop recommendations.</p>
           </div>
 

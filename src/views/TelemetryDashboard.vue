@@ -118,7 +118,7 @@ async function exportHistory() {
       <!-- Header -->
       <div class="page-header mb-8">
         <div>
-          <h1 class="text-2xl md:text-3xl font-bold tracking-tight">Live Telemetry</h1>
+          <h1 class="text-2xl md:text-3xl font-bold tracking-tight font-display">Live Telemetry</h1>
           <p class="text-muted mt-1 text-sm md:text-base">Real-time greenhouse sensor data</p>
         </div>
         <div class="ag-flex-row gap-3">
@@ -162,7 +162,7 @@ async function exportHistory() {
       <div class="chart-section">
         <div class="ag-flex-between mb-6 flex-wrap gap-4">
           <div>
-            <h2 class="font-bold text-lg">Trend Analysis</h2>
+            <h2 class="font-bold text-lg font-display">Trend Analysis</h2>
             <p class="text-xs text-muted mt-1">Historical data over time</p>
           </div>
           <SegmentedControl

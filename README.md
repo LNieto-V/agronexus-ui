@@ -72,11 +72,10 @@ graph LR
         Home["/tabs/home<br/>WelcomeHome"]
         Dashboard["/tabs/dashboard<br/>TelemetryDashboard"]
         Chat["/tabs/assistant<br/>TabChat"]
-        Reports["/tabs/reports<br/>ReportsPage"]
         System["/tabs/control<br/>TabSystem"]
     end
 
-    Home --- Dashboard & Chat & Reports & System
+    Home --- Dashboard & Chat & System
 ```
 
 | Ruta | Vista | Descripción | Guard |
@@ -85,8 +84,7 @@ graph LR
 | `/register` | `RegisterPage.vue` | Registro de nuevos usuarios | Público |
 | `/tabs/home` | `WelcomeHome.vue` | Landing con métricas de resumen y accesos rápidos | Auth |
 | `/tabs/dashboard` | `TelemetryDashboard.vue` | Gráficos en tiempo real con filtro por zona | Auth |
-| `/tabs/assistant` | `TabChat.vue` | Asistente IA multi-sesión con markdown | Auth |
-| `/tabs/reports` | `ReportsPage.vue` | Generador de informes IA con selección de zona, enfoque y rango | Auth |
+| `/tabs/assistant` | `TabChat.vue` | Asistente IA multi-sesión con markdown y reportes unificados | Auth |
 | `/tabs/control` | `TabSystem.vue` | Gestión de hardware, zonas y seguridad | Auth |
 
 > **Router Guard**: Un `beforeEach` global verifica `authStore.isAuthenticated`. Si el token expira (401 del backend), el interceptor de Axios limpia el estado y redirige a `/login` automáticamente.
@@ -231,6 +229,8 @@ src/
 │   ├── AppSelect.vue               #   Drop-downs opacos y blindados ante z-index
 │   ├── AppToast.vue                #   Snackbars / Toasts reactivos
 │   ├── MarkdownRenderer.vue        #   Render seguro de GFM y GitHub Alerts
+│   ├── ExportPdfButton.vue         #   Componente reutilizable de exportación a PDF
+│   ├── ReportGenerator.vue         #   Generador unificado de reportes IA
 │   └── system/                     #   Gestión del entorno IoT 
 │       ├── ApiSecurityPanel.vue    
 │       ├── ZoneManager.vue         
@@ -254,7 +254,7 @@ src/
 │
 └── views/                          # Páginas maestras con Vue Router
     ├── TabChat.vue                 #   Orquestación del chat RAG
-    ├── ReportsPage.vue             
+    ├── TelemetryDashboard.vue      #   Dashboard de monitoreo en tiempo real
     └── ...                         
 ```
 

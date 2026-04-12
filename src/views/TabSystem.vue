@@ -48,7 +48,7 @@ const zoneOptions = [
       <!-- Page Header -->
       <div class="page-header mb-8">
         <div>
-          <h1 class="text-2xl font-bold tracking-tight">Main Controller</h1>
+          <h1 class="text-2xl font-bold tracking-tight font-display">Main Controller</h1>
           <p class="text-muted mt-1 text-sm">
             Node 01 · Active <span class="text-primary">· Synced</span>
           </p>

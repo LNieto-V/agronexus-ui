@@ -1,26 +1,32 @@
-/* CSS Variables & Clean Modern AgTech Theme */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+/* CSS Variables & Clean Modern AgTech Theme - Emerald Observatory */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap');
 
 /* ─── Reset ─── */
 *, *::before, *::after { box-sizing: border-box; }
 
 :root {
   --ag-font: 'Inter', sans-serif;
+  --ag-font-display: 'Space Grotesk', sans-serif;
 
-  /** Premium Minimalist Dark Palette **/
-  --ag-primary: #10b981;
-  --ag-primary-rgb: 16, 185, 129;
-  --ag-primary-hover: #059669;
-  --ag-primary-soft: rgba(16, 185, 129, 0.1);
+  /** Premium Minimalist Dark Palette (Emerald Observatory) **/
+  --ag-primary: #4edea3;
+  --ag-primary-rgb: 78, 222, 163;
+  --ag-primary-hover: #45c490;
+  --ag-primary-soft: rgba(78, 222, 163, 0.1);
+  --ag-primary-container: #004f34;
 
-  --ag-bg: #09090b;
-  --ag-card: #18181b;
-  --ag-card-hover: #27272a;
-  --ag-card-soft: #141416;
+  --ag-bg: #0c1324;
+  --ag-card: rgba(21, 27, 45, 0.4);
+  --ag-card-hover: rgba(46, 52, 71, 0.6);
+  --ag-card-soft: rgba(21, 27, 45, 0.2);
+  
+  --ag-surface-container-low: #151b2d;
+  --ag-surface-variant: #2e3447;
+  --ag-surface-container-lowest: #070d1f;
 
-  --ag-text: #f4f4f5;
-  --ag-text-muted: #a1a1aa;
-  --ag-border: #27272a;
+  --ag-text: #dce1fb;
+  --ag-text-muted: #bfc9c3;
+  --ag-border: rgba(64, 73, 68, 0.2); /* Ghost border fallback */
 
   /** Semantic Colors **/
   --ag-blue: #3b82f6;
@@ -30,16 +36,19 @@
   --ag-orange: #f97316;
   --ag-danger: #ef4444;
 
-  /** Shadows **/
-  --ag-shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.05);
-  --ag-shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-  --ag-shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
-  --ag-radius: 16px;
+  /** Emerald Shadows **/
+  --ag-shadow-sm: 0 4px 15px rgba(0, 79, 52, 0.05);
+  --ag-shadow-md: 0 10px 25px rgba(0, 79, 52, 0.08);
+  --ag-shadow-lg: 0 30px 60px rgba(0, 79, 52, 0.08);
+  --ag-shadow-glow: 0 4px 15px rgba(78, 222, 163, 0.15);
+  --ag-shadow-glow-hover: 0 8px 25px rgba(78, 222, 163, 0.4);
+  
+  --ag-radius: 24px; /* Increased from 16px to 24px per specs usually */
 
   /** Aliases for backward compat **/
-  --ag-neon-green: #10b981;
-  --ag-neon-green-rgb: 16, 185, 129;
-  --ag-card-bg: #18181b;
+  --ag-neon-green: #4edea3;
+  --ag-neon-green-rgb: 78, 222, 163;
+  --ag-card-bg: rgba(21, 27, 45, 0.4);
 }
 
 /* ─── Base ─── */
@@ -142,29 +151,32 @@ button, input, textarea, select {
 /* ─── UI Components ─── */
 .ag-card {
   background-color: var(--ag-card);
-  border: 1px solid var(--ag-border);
+  border: none;
   border-radius: var(--ag-radius);
-  box-shadow: var(--ag-shadow-sm);
+  box-shadow: inset 0 1px 0 rgba(78, 222, 163, 0.1), var(--ag-shadow-md);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .ag-card.interactive:hover,
 .ag-card.cursor-pointer:hover {
-  border-color: rgba(var(--ag-primary-rgb), 0.3);
-  box-shadow: 0 12px 30px -10px rgba(0,0,0,0.5);
+  box-shadow: inset 0 1px 0 rgba(78, 222, 163, 0.2), var(--ag-shadow-lg);
   transform: translateY(-4px);
   background-color: var(--ag-card-hover);
 }
 
 .ag-glass {
-  background: rgba(255,255,255,0.03);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--ag-card);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: none;
+  box-shadow: inset 0 1px 0 rgba(78, 222, 163, 0.1), var(--ag-shadow-lg);
+  border-radius: var(--ag-radius);
 }
 
 .ag-text-gradient {
-  background: linear-gradient(135deg, var(--ag-primary) 0%, #3b82f6 100%);
+  background: linear-gradient(135deg, var(--ag-primary) 0%, var(--ag-primary-container) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -286,6 +298,7 @@ button, input, textarea, select {
 .bg-danger { background-color: var(--ag-danger); }
 
 /* ─── Typography ─── */
+.font-display { font-family: var(--ag-font-display); }
 .text-xs { font-size: 0.75rem; line-height: 1rem; }
 .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
 .text-base { font-size: 1rem; line-height: 1.5rem; }

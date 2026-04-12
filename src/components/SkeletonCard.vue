@@ -1,31 +1,27 @@
 <template>
-  <div class="ag-glass-card skeleton-card p-4">
-    <div class="flex items-center justify-between mb-2">
-      <div class="flex items-center gap-2">
-        <div class="skeleton-box" style="width:24px;height:24px;border-radius:4px" />
-        <div class="skeleton-box" style="width:80px;height:16px" />
+  <div class="ag-card p-6 flex flex-col skeleton-wrapper">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-3">
+        <div class="skeleton-box" style="width:36px;height:36px;border-radius:12px" />
+        <div class="skeleton-box" style="width:80px;height:12px" />
       </div>
-      <div class="skeleton-box" style="width:8px;height:8px;border-radius:50%" />
     </div>
 
-    <div class="flex items-baseline gap-1 mt-1">
-      <div class="skeleton-box" style="width:60px;height:32px" />
+    <div class="flex items-baseline gap-1 mb-4 flex-grow">
+      <div class="skeleton-box" style="width:60px;height:36px" />
       <div class="skeleton-box" style="width:20px;height:14px" />
     </div>
 
-    <div class="mt-3">
+    <div class="progress-track">
       <div class="skeleton-box" style="width:100%;height:6px;border-radius:9999px" />
     </div>
   </div>
 </template>
 
 <style scoped>
-.skeleton-card {
+.skeleton-wrapper {
   min-width: 160px;
   flex: 1;
-  background: var(--ag-card);
-  border: 1px solid var(--ag-border);
-  border-radius: 16px;
 }
 
 .skeleton-box {

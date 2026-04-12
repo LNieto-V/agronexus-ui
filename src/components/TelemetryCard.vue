@@ -12,24 +12,24 @@ defineProps<{
 </script>
 
 <template>
-  <div class="ag-card interactive p-4 flex flex-col">
+  <div class="ag-card interactive p-6 flex flex-col">
     <div class="ag-flex-between mb-4">
       <div class="ag-flex-row gap-3">
         <div class="ag-icon-box" :class="`bg-${color}-soft text-${color}`">
           <component :is="icon" :size="18" />
         </div>
-        <span class="text-xs font-semibold text-muted uppercase tracking-wide">{{ label }}</span>
+        <span class="text-xs font-semibold text-muted uppercase tracking-wider">{{ label }}</span>
       </div>
     </div>
 
     <div class="ag-flex-row items-baseline gap-1 mb-4 flex-grow">
-      <span class="text-3xl font-bold">{{ value }}</span>
+      <span class="text-3xl font-bold font-display">{{ value }}</span>
       <span class="text-sm font-medium text-muted uppercase">{{ unit }}</span>
     </div>
 
     <div class="progress-track">
       <div
-        class="progress-fill"
+        class="progress-fill glow-pulse"
         :class="`bg-${color}`"
         :style="{ width: `${progress}%` }"
       />
@@ -57,6 +57,10 @@ defineProps<{
   height: 100%;
   border-radius: 999px;
   transition: width 1s ease-out;
+  position: relative;
+}
+.progress-fill.bg-primary {
+  box-shadow: 0 0 10px rgba(78, 222, 163, 0.5);
 }
 
 /* Color classes using CSS vars */
